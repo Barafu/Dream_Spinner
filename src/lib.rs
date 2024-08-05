@@ -2,4 +2,7 @@
 
 mod dreamspinner;
 pub use dreamspinner::DreamSpinner;
+mod app_settings;
+
+//-------------------------------------------------------------
 mod dendraclock;
