@@ -32,7 +32,7 @@ enum MainCommand {
 ///Parses command line arfuments. Returns Err() if arguments are malformed.
 fn parse_args(args_in: &[String]) -> Result<ParsedArguments> {
     //Lowercasing everything:
-    let args: Vec<String> = args_in.iter().map(|s|s.to_lowercase()).collect();
+    let args: Vec<String> = args_in.iter().map(|s| s.to_lowercase()).collect();
 
     //If parsing goes wrong, just return Err;
     //With no args or wrong amount of args, abort parsing.
@@ -113,27 +113,42 @@ fn main() -> eframe::Result {
     let args: Vec<String> = std::env::args().collect();
     let parsed = parse_args(&args).unwrap();
 
-    if let MainCommand::Show = parsed.command {
 
-    let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            // .with_inner_size([400.0, 300.0])
-            // .with_min_inner_size([300.0, 220.0])
-            .with_fullscreen(true)
-            .with_taskbar(false)
-            .with_drag_and_drop(false)
-            .with_icon(
-                // NOTE: Adding an icon is optional
-                eframe::icon_data::from_png_bytes(&include_bytes!("../assets/icon-256.png")[..])
+    // Display dreams
+    if parsed.command == MainCommand::Show {    
+
+        // DreamSpinner supports multiple displays. In OS, therer are concepts of 
+        // a primary display and secondary displays. In eframe, there are primary
+        // window and secondary windows. Secondary windows have to be created from
+        // the draw code of primary window.
+        //
+        // So, we detect primary monitor and create a primary window on it,
+        // then we pass the list of remaining monitors to the primary window for
+        // creating secondary windows.
+
+       
+        
+
+        let native_options = eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default()
+                // .with_position([primary_display.x as f32, primary_display.y as f32])
+                // .with_fullscreen(true)
+                .with_taskbar(false)
+                .with_drag_and_drop(false)
+                .with_icon(
+                    // NOTE: Adding an icon is optional
+                    eframe::icon_data::from_png_bytes(
+                        &include_bytes!("../assets/icon-256.png")[..],
+                    )
                     .expect("Failed to load icon"),
-            ),
-        ..Default::default()
-    };
-    return eframe::run_native(
-        "DreamSpinner",
-        native_options,
-        Box::new(|cc| Ok(Box::new(dream_spinner::TemplateApp::new(cc)))),
-    )
+                ),
+            ..Default::default()
+        };
+        return eframe::run_native(
+            "DreamSpinner",
+            native_options,
+            Box::new(|cc| Ok(Box::new(dream_spinner::DreamSpinner::new(cc)))),
+        );
     };
     Ok(())
 }
@@ -151,7 +166,7 @@ fn main() {
             .start(
                 "the_canvas_id",
                 web_options,
-                Box::new(|cc| Ok(Box::new(dream_spinner::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(dream_spinner::DreamSpinner::new(cc)))),
             )
             .await;
 
