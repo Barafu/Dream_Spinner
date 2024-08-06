@@ -1,5 +1,6 @@
 use egui::{containers::*, widgets::*, *};
 use std::f32::consts::TAU;
+use chrono::{Local, Timelike};
 
 #[derive(PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -38,6 +39,9 @@ impl FractalClock {
             self.time = seconds_since_midnight.unwrap_or_else(|| ui.input(|i| i.time));
             ui.ctx().request_repaint();
         }
+        // let now = Local::now().time();
+            // let seconds_from_midnight: f64 =
+            //     now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
 
         let painter = Painter::new(
             ui.ctx().clone(),

@@ -2,6 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use anyhow::{bail, Result};
+use std::sync::{Arc, RwLock};
+use dream_spinner::app_settings::Settings;
+
 
 //Parsing CLI arguments
 
@@ -126,8 +129,8 @@ fn main() -> eframe::Result {
         // then we pass the list of remaining monitors to the primary window for
         // creating secondary windows.
 
-       
-        
+        let settings = Settings::read_from_file_default().unwrap();
+        let settings = Arc::new(RwLock::new(settings));
 
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -147,7 +150,7 @@ fn main() -> eframe::Result {
         return eframe::run_native(
             "DreamSpinner",
             native_options,
-            Box::new(|cc| Ok(Box::new(dream_spinner::DreamSpinner::new(cc)))),
+            Box::new(|cc| Ok(Box::new(dream_spinner::DreamSpinner::new(cc, settings)))),
         );
     };
     Ok(())

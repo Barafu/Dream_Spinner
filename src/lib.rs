@@ -1,8 +1,6 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
-mod dreamspinner;
+pub mod dreamspinner;
 pub use dreamspinner::DreamSpinner;
-mod app_settings;
-
-//-------------------------------------------------------------
-mod dendraclock;
+pub mod app_settings;
+pub mod dreams;

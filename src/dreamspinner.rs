@@ -1,15 +1,17 @@
-use chrono::{Local, Timelike};
+use std::sync::{Arc, RwLock};
 
-use crate::dendraclock::FractalClock;
+use crate::dreams::*;
+use crate::app_settings::Settings;
 
 pub struct DreamSpinner {
-    fractal_clock: FractalClock,
     first_frame: bool,
+    settings: Arc<RwLock<Settings>>,
+    zoo: Vec<Box<dyn Dream>>,
 }
 
 impl DreamSpinner {
     /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(_cc: &eframe::CreationContext<'_>, settings: Arc<RwLock<Settings>>) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
@@ -19,9 +21,12 @@ impl DreamSpinner {
         //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         // }
 
+        let zoo = build_zoo(settings.clone());
+
         Self {
-            fractal_clock: FractalClock::default(),
+            settings,
             first_frame: true,
+            zoo,
         }
     }
 }
@@ -49,10 +54,8 @@ impl eframe::App for DreamSpinner {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            let now = Local::now().time();
-            let seconds_from_midnight: f64 =
-                now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
-            self.fractal_clock.ui(ui, Some(seconds_from_midnight));
+            
+            self.zoo[0].dream_egui(ui);
             ui.input(|input| {
                 if input.pointer.any_released() {
                     std::process::exit(0);
