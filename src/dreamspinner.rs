@@ -38,64 +38,58 @@ impl eframe::App for DreamSpinner {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let active_dream = self.zoo[1].clone();
+        // Get information on all displays
+        let mut displays = DisplayInfo::all().unwrap();
+        if displays.len() == 0 {
+            panic!("Can't find any displays");
+        }
+
+        // Find primary display, move primary window to it.
+        let primary_position = displays.iter().position(|d| d.is_primary).unwrap();
+        let primary_display = displays.swap_remove(primary_position);
+        // List secondary monitors for creating additional windows. 
+        if self.settings.read().unwrap().attempt_multiscreen {
+            self.secondary_displays = displays;
+        }
         if self.first_frame {
             self.first_frame = false;
 
-            // Get information on all displays
-            let mut displays = DisplayInfo::all().unwrap();
-            if displays.len() == 0 {
-                panic!("Can't find any displays");
-            }
-
-            // Find primary display, move primary window to it.
-            let primary_position = displays.iter().position(|d| d.is_primary).unwrap();
-            let primary_display = displays.swap_remove(primary_position);
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(
                 [primary_display.x as f32, primary_display.y as f32].into(),
             ));
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
-
-            // List secondary monitors for creating additional windows. 
-            if self.settings.read().unwrap().attempt_multiscreen {
-                self.secondary_displays = displays;
-            }
         }
         egui::CentralPanel::default().show(ctx, |ui| {
+            active_dream.write().unwrap().dream_egui(ui);
+            self.set_input(ui);
             // Create secondary windows
             for display in self.secondary_displays.iter().cloned() {
+                let n = display.scale_factor as f32;
                 let viewport_builder = egui::ViewportBuilder::default()
+                    .with_position([display.x as f32/1.5, display.y as f32/1.5])
+                    .with_fullscreen(true)
                     .with_taskbar(false)
                     .with_drag_and_drop(false);
                 let viewport_id = egui::ViewportId::from_hash_of(display.id);
 
                 let thread_dream_arc = active_dream.clone();
 
-                ctx.show_viewport_deferred(viewport_id, viewport_builder, move |ctx, class| {
-                    assert!(
-                        class == egui::ViewportClass::Deferred,
-                        "This egui backend doesn't support multiple viewports"
-                    );
+                ctx.show_viewport_immediate(viewport_id, viewport_builder, move |ctx, class| {
+                    // assert!(
+                    //     class == egui::ViewportClass::Deferred,
+                    //     "This egui backend doesn't support multiple viewports"
+                    // );
 
                     egui::CentralPanel::default().show(ctx, |ui| {
                         let mut painter = thread_dream_arc.write().unwrap();
                         painter.dream_egui(ui);
                     });
                 });
+                //ctx.request_repaint_of(viewport_id);
             }
 
-            active_dream.write().unwrap().dream_egui(ui);
-            self.set_input(ui);
-            for display in self.secondary_displays.iter() {
-                let viewport_id = egui::ViewportId::from_hash_of(display.id);
-                ctx.send_viewport_cmd_to(
-                    viewport_id,
-                    egui::ViewportCommand::OuterPosition(
-                        dbg!([display.x as f32, display.y as f32]).into(),
-                    ),
-                );
-                ctx.send_viewport_cmd_to(viewport_id, egui::ViewportCommand::Fullscreen(true));
-            }
         });
+        ctx.request_repaint();
     }
 }
 

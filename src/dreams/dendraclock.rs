@@ -92,9 +92,9 @@ impl DendraClock {
         ui.expand_to_include_rect(painter.clip_rect());
 
         // Tell UI to paint next frame as soon as possible.
-        if !self.paused {
+        /*if !self.paused {
             ui.ctx().request_repaint();
-        }
+        }*/
     }
 
     fn options_ui(&mut self, ui: &mut Ui) {
