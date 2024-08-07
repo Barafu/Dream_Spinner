@@ -1,12 +1,14 @@
+use display_info::DisplayInfo;
 use std::sync::{Arc, RwLock};
 
-use crate::dreams::*;
 use crate::app_settings::Settings;
+use crate::dreams::*;
 
 pub struct DreamSpinner {
     first_frame: bool,
     settings: Arc<RwLock<Settings>>,
-    zoo: Vec<Box<dyn Dream>>,
+    zoo: Vec<Arc<RwLock<dyn Dream>>>,
+    secondary_displays: Vec<DisplayInfo>,
 }
 
 impl DreamSpinner {
@@ -27,16 +29,16 @@ impl DreamSpinner {
             settings,
             first_frame: true,
             zoo,
+            secondary_displays: Vec::new(),
         }
     }
 }
 
-impl eframe::App for DreamSpinner {   
-
+impl eframe::App for DreamSpinner {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let active_dream = self.zoo[1].clone();
         if self.first_frame {
-            use screen_info::DisplayInfo;
             self.first_frame = false;
 
             // Get information on all displays
@@ -45,24 +47,66 @@ impl eframe::App for DreamSpinner {
                 panic!("Can't find any displays");
             }
 
-            // Find primary display
+            // Find primary display, move primary window to it.
             let primary_position = displays.iter().position(|d| d.is_primary).unwrap();
             let primary_display = displays.swap_remove(primary_position);
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(
                 [primary_display.x as f32, primary_display.y as f32].into(),
             ));
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+
+            // List secondary monitors for creating additional windows. 
+            if self.settings.read().unwrap().attempt_multiscreen {
+                self.secondary_displays = displays;
+            }
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            
-            self.zoo[0].dream_egui(ui);
-            ui.input(|input| {
-                if input.pointer.any_released() {
-                    std::process::exit(0);
-                }
-            });
-            ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::None);
+            // Create secondary windows
+            for display in self.secondary_displays.iter().cloned() {
+                let viewport_builder = egui::ViewportBuilder::default()
+                    .with_taskbar(false)
+                    .with_drag_and_drop(false);
+                let viewport_id = egui::ViewportId::from_hash_of(display.id);
+
+                let thread_dream_arc = active_dream.clone();
+
+                ctx.show_viewport_deferred(viewport_id, viewport_builder, move |ctx, class| {
+                    assert!(
+                        class == egui::ViewportClass::Deferred,
+                        "This egui backend doesn't support multiple viewports"
+                    );
+
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        let mut painter = thread_dream_arc.write().unwrap();
+                        painter.dream_egui(ui);
+                    });
+                });
+            }
+
+            active_dream.write().unwrap().dream_egui(ui);
+            self.set_input(ui);
+            for display in self.secondary_displays.iter() {
+                let viewport_id = egui::ViewportId::from_hash_of(display.id);
+                ctx.send_viewport_cmd_to(
+                    viewport_id,
+                    egui::ViewportCommand::OuterPosition(
+                        dbg!([display.x as f32, display.y as f32]).into(),
+                    ),
+                );
+                ctx.send_viewport_cmd_to(viewport_id, egui::ViewportCommand::Fullscreen(true));
+            }
         });
+    }
+}
+
+impl DreamSpinner {
+    fn set_input(&self, ui: &mut egui::Ui) {
+        ui.input(|input| {
+            if input.pointer.any_released() {
+                std::process::exit(0);
+            }
+        });
+        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::None);
     }
 }
 

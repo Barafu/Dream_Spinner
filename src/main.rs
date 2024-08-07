@@ -129,7 +129,8 @@ fn main() -> eframe::Result {
         // then we pass the list of remaining monitors to the primary window for
         // creating secondary windows.
 
-        let settings = Settings::read_from_file_default().unwrap();
+        let mut settings = Settings::read_from_file_default().unwrap();
+        settings.attempt_multiscreen = true;
         let settings = Arc::new(RwLock::new(settings));
 
         let native_options = eframe::NativeOptions {

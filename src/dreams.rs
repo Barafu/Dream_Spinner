@@ -2,20 +2,20 @@ use crate::app_settings::Settings;
 use std::sync::{Arc, RwLock};
 
 mod solid_color;
-//mod dendraclock;
+mod dendraclock;
 
 pub enum DreamType {
     Egui,
 }
-pub trait Dream {
+pub trait Dream: Sync + Send {
+    /// Create the dream using the settings
+    fn new(settings: Arc<RwLock<Settings>>) -> Self
+    where
+        Self: Sized;
     /// Gives unique ID for the system
     fn id(&self) -> String;
     /// Gives the name to display in UI
     fn name(&self) -> String;
-    /// Create the dream using the settings
-    fn construct(settings: Arc<RwLock<Settings>>) -> Self
-    where
-        Self: Sized;
 
     /// Prepare dream for rendering (load resources, initialize RNG etc.)    
     fn prepare(&self) {}
@@ -43,15 +43,11 @@ pub trait Dream {
 }
 
 /// For giggles, I call the collection of all dream types "zoo"
-pub fn build_zoo(settings: Arc<RwLock<Settings>>) -> Vec<Box<dyn Dream>> {
-    let mut zoo: Vec<Box<dyn Dream>> = Vec::new();
-    let d = Box::new(solid_color::SolidColorDream::construct(settings));
-    zoo.push(d);
+pub fn build_zoo(settings: Arc<RwLock<Settings>>) -> Vec<Arc<RwLock<dyn Dream>>> {
+    let mut zoo: Vec<Arc<RwLock<dyn Dream>>> = Vec::new();
+    let d = RwLock::new(solid_color::SolidColorDream::new(settings.clone()));
+    zoo.push(Arc::new(d));
+    let d = RwLock::new(dendraclock::DendraClock::new(settings.clone()));
+    zoo.push(Arc::new(d));
     zoo
 }
-
-// pub fn zoo_as_base(zoo: &Vec<Dream>) -> Vec<&dyn Dream> {
-//     zoo.iter().map(|i| match i {
-//         Dream::Egui(x) => &*x as &dyn Dream,
-//     }).collect()
-// }

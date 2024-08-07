@@ -6,6 +6,8 @@ use std::{collections::HashMap, fs::File, path::{Path, PathBuf}};
 #[serde(default)]
 /// Contains all persistant settings of the application
 pub struct Settings {
+    /// Try to detect and cover additional monitors.
+    pub attempt_multiscreen: bool,
     /// Contains unique settings of particular dreams
     pub dream_settings: HashMap<String, String>,
 }

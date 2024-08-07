@@ -22,9 +22,9 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 anyhow = "1.0.86"
-screen-info = "0.0.1"
 toml = "0.8.19"
 directories = "5.0.1"
+display-info = "0.5.1"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

@@ -9,6 +9,12 @@ pub struct SolidColorDream {
 
 
 impl Dream for SolidColorDream {
+    fn new(settings: Arc<RwLock<Settings>>) -> Self {
+        Self {
+            color: egui::Color32::BROWN,
+            settings,
+        }
+    }
     fn id(&self) -> String {
         "SolidColor".to_string()
     }
@@ -17,12 +23,6 @@ impl Dream for SolidColorDream {
         "Solid Color".to_string()
     }   
 
-    fn construct(settings: Arc<RwLock<Settings>>) -> Self {
-        Self {
-            color: egui::Color32::BROWN,
-            settings,
-        }
-    }
     
     fn get_type(&self) -> DreamType {
         return DreamType::Egui;

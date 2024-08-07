@@ -1,13 +1,18 @@
-use egui::{containers::*, widgets::*, *};
+use egui::{widgets::*, *};
 use std::f32::consts::TAU;
 use chrono::{Local, Timelike};
+use crate::dreams::*;
 
-#[derive(PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(default))]
-pub struct FractalClock {
+pub struct DendraClock {
     paused: bool,
     time: f64,
+    local_settings: DendraClockSettings,    
+    app_settings: Arc<RwLock<Settings>>,
+}
+
+#[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+struct DendraClockSettings {
     zoom: f32,
     start_line_width: f32,
     depth: usize,
@@ -17,11 +22,9 @@ pub struct FractalClock {
     line_count: usize,
 }
 
-impl Default for FractalClock {
+impl Default for DendraClockSettings {
     fn default() -> Self {
         Self {
-            paused: false,
-            time: 0.0,
             zoom: 0.25,
             start_line_width: 2.5,
             depth: 9,
@@ -33,16 +36,52 @@ impl Default for FractalClock {
     }
 }
 
-impl FractalClock {
-    pub fn ui(&mut self, ui: &mut Ui, seconds_since_midnight: Option<f64>) {
-        if !self.paused {
-            self.time = seconds_since_midnight.unwrap_or_else(|| ui.input(|i| i.time));
-            ui.ctx().request_repaint();
-        }
-        // let now = Local::now().time();
-            // let seconds_from_midnight: f64 =
-            //     now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
+impl Dream for DendraClock {
+    fn id(&self) -> String {
+        "FractalClock".to_string()
+    }
 
+    fn name(&self) -> String {
+        "Fractal Clock".to_string()
+    }
+
+    fn new(settings: Arc<RwLock<Settings>>) -> Self {
+        let local_settings = DendraClockSettings::default();
+        Self {
+            paused: false,
+            time: 0.0,
+            local_settings,
+            app_settings: settings,
+        }
+    }
+
+    fn get_type(&self) -> DreamType {
+        return DreamType::Egui;
+    }
+
+    fn dream_egui(&mut self, ui: &mut egui::Ui) {
+        self.paint_ui(ui);
+    }
+
+    fn config_egui(&mut self, ui: &mut egui::Ui) {
+        self.options_ui(ui);
+    }
+    
+    fn prepare(&self) {}
+    
+    fn needs_loading(&self) -> bool {
+        false
+    }
+    
+    fn store(&self)  { }
+}
+
+impl DendraClock {
+    pub fn paint_ui(&mut self, ui: &mut Ui) {
+        let now = Local::now().time();
+        self.time =
+        now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
+        
         let painter = Painter::new(
             ui.ctx().clone(),
             ui.layer_id(),
@@ -52,17 +91,15 @@ impl FractalClock {
         // Make sure we allocate what we used (everything)
         ui.expand_to_include_rect(painter.clip_rect());
 
-        // Frame::popup(ui.style())
-        //     .stroke(Stroke::NONE)
-        //     .show(ui, |ui| {
-        //         ui.set_max_width(270.0);
-        //         CollapsingHeader::new("Settings")
-        //             .show(ui, |ui| self.options_ui(ui, seconds_since_midnight));
-        //     });
+        // Tell UI to paint next frame as soon as possible.
+        if !self.paused {
+            ui.ctx().request_repaint();
+        }
     }
 
-    fn options_ui(&mut self, ui: &mut Ui, seconds_since_midnight: Option<f64>) {
-        if seconds_since_midnight.is_some() {
+    fn options_ui(&mut self, ui: &mut Ui) {
+        //ui.label(format!("Local time: {:02}:{:02}:{:02}.{:03}", (self.time % (24.0 * 60.0 * 60.0) / 3600.0).floor(), (self.time % (60.0 * 60.0) / 60.0).floor(), (self.time % 60.0).floor(), (self.time % 1.0 * 100.0).floor()));
+        /*if seconds_since_midnight.is_some() {
             ui.label(format!(
                 "Local time: {:02}:{:02}:{:02}.{:03}",
                 (self.time % (24.0 * 60.0 * 60.0) / 3600.0).floor(),
@@ -72,18 +109,16 @@ impl FractalClock {
             ));
         } else {
             ui.label("The fractal_clock clock is not showing the correct time");
-        };
-        ui.label(format!("Painted line count: {}", self.line_count));
-
-        ui.checkbox(&mut self.paused, "Paused");
-        ui.add(Slider::new(&mut self.zoom, 0.0..=1.0).text("zoom"));
-        ui.add(Slider::new(&mut self.start_line_width, 0.0..=5.0).text("Start line width"));
-        ui.add(Slider::new(&mut self.depth, 0..=14).text("depth"));
-        ui.add(Slider::new(&mut self.length_factor, 0.0..=1.0).text("length factor"));
-        ui.add(Slider::new(&mut self.luminance_factor, 0.0..=1.0).text("luminance factor"));
-        ui.add(Slider::new(&mut self.width_factor, 0.0..=1.0).text("width factor"));
-
-        egui::reset_button(ui, self, "Reset");
+        };*/
+       
+        ui.add(Slider::new(&mut self.local_settings.zoom, 0.0..=1.0).text("zoom"));
+        ui.add(Slider::new(&mut self.local_settings.start_line_width, 0.0..=5.0).text("Start line width"));
+        ui.add(Slider::new(&mut self.local_settings.depth, 0..=14).text("depth"));
+        ui.add(Slider::new(&mut self.local_settings.length_factor, 0.0..=1.0).text("length factor"));
+        ui.add(Slider::new(&mut self.local_settings.luminance_factor, 0.0..=1.0).text("luminance factor"));
+        ui.add(Slider::new(&mut self.local_settings.width_factor, 0.0..=1.0).text("width factor"));
+        
+        egui::reset_button(ui, &mut self.local_settings, "Reset");
 
         ui.hyperlink_to(
             "Inspired by a screensaver by Rob Mayoff",
@@ -113,9 +148,9 @@ impl FractalClock {
 
         let hands = [
             // Second hand:
-            Hand::from_length_angle(self.length_factor, angle_from_period(60.0)),
+            Hand::from_length_angle(self.local_settings.length_factor, angle_from_period(60.0)),
             // Minute hand:
-            Hand::from_length_angle(self.length_factor, angle_from_period(60.0 * 60.0)),
+            Hand::from_length_angle(self.local_settings.length_factor, angle_from_period(60.0 * 60.0)),
             // Hour hand:
             Hand::from_length_angle(0.5, angle_from_period(12.0 * 60.0 * 60.0)),
         ];
@@ -124,7 +159,7 @@ impl FractalClock {
 
         let rect = painter.clip_rect();
         let to_screen = emath::RectTransform::from_to(
-            Rect::from_center_size(Pos2::ZERO, rect.square_proportions() / self.zoom),
+            Rect::from_center_size(Pos2::ZERO, rect.square_proportions() / self.local_settings.zoom),
             rect,
         );
 
@@ -153,9 +188,9 @@ impl FractalClock {
             dir: Vec2,
         }
 
-        let mut nodes = Vec::new();
+        let mut nodes = Vec::with_capacity(self.local_settings.line_count);
 
-        let mut width = self.start_line_width;
+        let mut width = self.local_settings.start_line_width;
 
         for (i, hand) in hands.iter().enumerate() {
             let center = pos2(0.0, 0.0);
@@ -172,12 +207,12 @@ impl FractalClock {
         let mut luminance = 0.7; // Start dimmer than main hands
 
         let mut new_nodes = Vec::new();
-        for _ in 0..self.depth {
+        for _ in 0..self.local_settings.depth {
             new_nodes.clear();
             new_nodes.reserve(nodes.len() * 2);
 
-            luminance *= self.luminance_factor;
-            width *= self.width_factor;
+            luminance *= self.local_settings.luminance_factor;
+            width *= self.local_settings.width_factor;
 
             let luminance_u8 = (255.0 * luminance).round() as u8;
             if luminance_u8 == 0 {
@@ -202,7 +237,7 @@ impl FractalClock {
 
             std::mem::swap(&mut nodes, &mut new_nodes);
         }
-        self.line_count = shapes.len();
+        self.local_settings.line_count = shapes.len();
         painter.extend(shapes);
     }
 }
