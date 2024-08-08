@@ -9,6 +9,7 @@ pub struct DreamSpinner {
     settings: Arc<RwLock<Settings>>,
     zoo: Vec<Arc<RwLock<dyn Dream>>>,
     secondary_displays: Vec<DisplayInfo>,
+    primary_display: DisplayInfo,
 }
 
 impl DreamSpinner {
@@ -23,13 +24,29 @@ impl DreamSpinner {
         //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         // }
 
+        // Detect the displays.
+        let mut displays = DisplayInfo::all().unwrap();
+        if displays.len() == 0 {
+            panic!("Can't find any displays");
+        }
+        // Find primary display
+        let primary_position = displays.iter().position(|d| d.is_primary).unwrap();
+        let primary_display = displays.swap_remove(primary_position);
+        displays.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
+        // List secondary monitors for creating additional windows.
+        let secondary_displays = match settings.read().unwrap().attempt_multiscreen {
+            true => displays,
+            false => Vec::new(),
+        };
+
         let zoo = build_zoo(settings.clone());
 
         Self {
             settings,
             first_frame: true,
             zoo,
-            secondary_displays: Vec::new(),
+            primary_display,
+            secondary_displays,
         }
     }
 }
@@ -39,34 +56,29 @@ impl eframe::App for DreamSpinner {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let active_dream = self.zoo[1].clone();
         // Get information on all displays
-        let mut displays = DisplayInfo::all().unwrap();
-        if displays.len() == 0 {
-            panic!("Can't find any displays");
-        }
 
-        // Find primary display, move primary window to it.
-        let primary_position = displays.iter().position(|d| d.is_primary).unwrap();
-        let primary_display = displays.swap_remove(primary_position);
-        // List secondary monitors for creating additional windows. 
-        if self.settings.read().unwrap().attempt_multiscreen {
-            self.secondary_displays = displays;
-        }
+        let primary_viewport_id = ctx.viewport_id();
+
         if self.first_frame {
             self.first_frame = false;
 
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(
-                [primary_display.x as f32, primary_display.y as f32].into(),
+                [
+                    self.primary_display.x as f32 / self.primary_display.scale_factor,
+                    self.primary_display.y as f32 / self.primary_display.scale_factor,
+                ]
+                .into(),
             ));
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            active_dream.write().unwrap().dream_egui(ui);
-            self.set_input(ui);
             // Create secondary windows
-            for display in self.secondary_displays.iter().cloned() {
-                let n = display.scale_factor as f32;
+            for display in self.secondary_displays.iter() {
                 let viewport_builder = egui::ViewportBuilder::default()
-                    .with_position([display.x as f32/1.5, display.y as f32/1.5])
+                    .with_position([
+                        display.x as f32 / display.scale_factor,
+                        display.y as f32 / display.scale_factor,
+                    ])
                     .with_fullscreen(true)
                     .with_taskbar(false)
                     .with_drag_and_drop(false);
@@ -74,27 +86,31 @@ impl eframe::App for DreamSpinner {
 
                 let thread_dream_arc = active_dream.clone();
 
-                ctx.show_viewport_immediate(viewport_id, viewport_builder, move |ctx, class| {
-                    // assert!(
-                    //     class == egui::ViewportClass::Deferred,
-                    //     "This egui backend doesn't support multiple viewports"
-                    // );
+                ctx.show_viewport_deferred(viewport_id, viewport_builder, move |ctx, class| {
+                    assert!(
+                        class == egui::ViewportClass::Deferred,
+                        "This egui backend doesn't support multiple viewports"
+                    );
 
                     egui::CentralPanel::default().show(ctx, |ui| {
                         let mut painter = thread_dream_arc.write().unwrap();
                         painter.dream_egui(ui);
+                        DreamSpinner::set_input(ui);
                     });
                 });
-                //ctx.request_repaint_of(viewport_id);
+                ctx.request_repaint_of(viewport_id);
+                ctx.request_repaint_of(primary_viewport_id);
             }
-
+            // Paint primary window
+            active_dream.write().unwrap().dream_egui(ui);
+            DreamSpinner::set_input(ui);
+            ctx.request_repaint();
         });
-        ctx.request_repaint();
     }
 }
 
 impl DreamSpinner {
-    fn set_input(&self, ui: &mut egui::Ui) {
+    fn set_input( ui: &mut egui::Ui) {
         ui.input(|input| {
             if input.pointer.any_released() {
                 std::process::exit(0);
