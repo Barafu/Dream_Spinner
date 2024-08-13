@@ -3,9 +3,9 @@ use std::f32::consts::TAU;
 use chrono::{Local, Timelike};
 use crate::dreams::*;
 
-pub struct DendraClock {
+pub struct DendraClockDream {
     local_settings: DendraClockSettings,    
-    app_settings: Arc<RwLock<Settings>>,
+    app_settings: Settings,
 }
 
 #[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize)]
@@ -34,16 +34,16 @@ impl Default for DendraClockSettings {
     }
 }
 
-impl Dream for DendraClock {
-    fn id(&self) -> String {
-        "FractalClock".to_string()
+impl Dream for DendraClockDream {
+    fn id(&self) -> u32 {
+        1041127
     }
 
     fn name(&self) -> String {
         "Fractal Clock".to_string()
     }
 
-    fn new(settings: Arc<RwLock<Settings>>) -> Self {
+    fn new(settings: Settings) -> Self {
         let local_settings = DendraClockSettings::default();
         Self {
             local_settings,
@@ -72,7 +72,7 @@ impl Dream for DendraClock {
     fn store(&self)  { }
 }
 
-impl DendraClock {
+impl DendraClockDream {
     pub fn paint_ui(&self, ui: &mut Ui) {
                
         let painter = Painter::new(

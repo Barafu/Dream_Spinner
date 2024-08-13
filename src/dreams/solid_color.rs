@@ -4,19 +4,19 @@ use crate::dreams::*;
 
 pub struct SolidColorDream {
     color: egui::Color32,
-    settings: Arc<RwLock<Settings>>,
+    settings: Settings,
 }
 
 
 impl Dream for SolidColorDream {
-    fn new(settings: Arc<RwLock<Settings>>) -> Self {
+    fn new(settings: Settings) -> Self {
         Self {
             color: egui::Color32::BROWN,
             settings,
         }
     }
-    fn id(&self) -> String {
-        "SolidColor".to_string()
+    fn id(&self) -> u32 {
+        178948847
     }
 
     fn name(&self) -> String {

@@ -2,9 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use anyhow::{bail, Result};
+use dream_spinner::app_settings::SettingsRaw;
+use dream_spinner::dreamspinner::DreamSpinner;
+use dream_spinner::dreamconfig::DreamConfigApp;
 use std::sync::{Arc, RwLock};
-use dream_spinner::app_settings::Settings;
-
 
 //Parsing CLI arguments
 
@@ -110,51 +111,81 @@ fn parse_args(args_in: &[String]) -> Result<ParsedArguments> {
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
-fn main() -> eframe::Result {
+fn main() -> anyhow::Result<()> {
+
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
     let args: Vec<String> = std::env::args().collect();
     let parsed = parse_args(&args).unwrap();
 
-
+    // Load settings from file
+    let settings = Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
+    
+    
+    // Eframe result, for error messages
+    let egui_result;
+    
     // Display dreams
-    if parsed.command == MainCommand::Show {    
+    match parsed.command {
+        MainCommand::Show => {
+            let settings_2 = settings.clone();
+            settings_2.write().unwrap().attempt_multiscreen = true;
+            // DreamSpinner supports multiple displays. In OS, there are concepts of
+            // a primary display and secondary displays. In eframe, there are primary
+            // window and secondary windows. Secondary windows have to be created from
+            // the draw code of primary window.
+            //
+            // So, we detect primary monitor and create a primary window on it,
+            // then we pass the list of remaining monitors to the primary window for
+            // creating secondary windows.
+            
 
-        // DreamSpinner supports multiple displays. In OS, therer are concepts of 
-        // a primary display and secondary displays. In eframe, there are primary
-        // window and secondary windows. Secondary windows have to be created from
-        // the draw code of primary window.
-        //
-        // So, we detect primary monitor and create a primary window on it,
-        // then we pass the list of remaining monitors to the primary window for
-        // creating secondary windows.
+            let native_options = eframe::NativeOptions {
+                viewport: egui::ViewportBuilder::default()
+                    // .with_position([primary_display.x as f32, primary_display.y as f32])
+                    // .with_fullscreen(true)
+                    .with_taskbar(false)
+                    .with_drag_and_drop(false)
+                    .with_icon(
+                        // NOTE: Adding an icon is optional
+                        eframe::icon_data::from_png_bytes(
+                            &include_bytes!("../assets/icon-256.png")[..],
+                        )
+                        .expect("Failed to load icon"),
+                    ),
+                ..Default::default()
+            };
 
-        let mut settings = Settings::read_from_file_default().unwrap();
-        settings.attempt_multiscreen = true;
-        let settings = Arc::new(RwLock::new(settings));
+            egui_result = eframe::run_native(
+                "DreamSpinner",
+                native_options,
+                Box::new(|cc| Ok(Box::new(DreamSpinner::new(cc, settings_2)))),
+            );
+            settings.write().unwrap().write_to_file_default()?;
+        }
+        MainCommand::Config => {
+            // Show the config window
 
-        let native_options = eframe::NativeOptions {
-            viewport: egui::ViewportBuilder::default()
-                // .with_position([primary_display.x as f32, primary_display.y as f32])
-                // .with_fullscreen(true)
-                .with_taskbar(false)
-                .with_drag_and_drop(false)
-                .with_icon(
-                    // NOTE: Adding an icon is optional
-                    eframe::icon_data::from_png_bytes(
-                        &include_bytes!("../assets/icon-256.png")[..],
-                    )
-                    .expect("Failed to load icon"),
-                ),
-            ..Default::default()
-        };
-        return eframe::run_native(
-            "DreamSpinner",
-            native_options,
-            Box::new(|cc| Ok(Box::new(dream_spinner::DreamSpinner::new(cc, settings)))),
-        );
+            let native_options = eframe::NativeOptions {
+                viewport: egui::ViewportBuilder::default(),
+                ..Default::default()
+            };
+
+            egui_result = eframe::run_native(
+                "DreamSpinner",
+                native_options,
+                Box::new(|cc| Ok(Box::new(DreamConfigApp::new(cc)?))),
+            );
+        }
+        MainCommand::Preview => {
+            egui_result = Ok(()); //TODO
+        }
     };
-    Ok(())
+    
+    return match egui_result {
+        Ok(n) => Ok(n),
+        Err(e) => Err(anyhow::Error::msg(e.to_string())),
+    }
 }
 
 // When compiling to web using trunk:

@@ -4,16 +4,24 @@ use std::sync::{Arc, RwLock};
 mod solid_color;
 mod dendraclock;
 
+/// For giggles, I call the collection of all dream types "zoo"
+pub type Zoo = Vec<Arc<RwLock<dyn Dream>>>;
+
+#[derive(PartialEq, Debug)]
 pub enum DreamType {
     Egui,
 }
 pub trait Dream: Sync + Send {
     /// Create the dream using the settings
-    fn new(settings: Arc<RwLock<Settings>>) -> Self
+    fn new(settings: Settings) -> Self
     where
         Self: Sized;
-    /// Gives unique ID for the system
-    fn id(&self) -> String;
+    /// Gives unique ID of the dream. Must be a unique literal between 0 and 429496729
+    /// If you have Python, run
+    /// ```python
+    ///     python -c "import random; print (random.randrange(429496729))"
+    /// ```
+    fn id(&self) -> u32;
     /// Gives the name to display in UI
     fn name(&self) -> String;
 
@@ -42,12 +50,11 @@ pub trait Dream: Sync + Send {
     fn store(&self)  { }
 }
 
-/// For giggles, I call the collection of all dream types "zoo"
-pub fn build_zoo(settings: Arc<RwLock<Settings>>) -> Vec<Arc<RwLock<dyn Dream>>> {
-    let mut zoo: Vec<Arc<RwLock<dyn Dream>>> = Vec::new();
+pub fn build_zoo(settings: Settings) -> Zoo {
+    let mut zoo: Zoo = Zoo::new();
     let d = RwLock::new(solid_color::SolidColorDream::new(settings.clone()));
     zoo.push(Arc::new(d));
-    let d = RwLock::new(dendraclock::DendraClock::new(settings.clone()));
+    let d = RwLock::new(dendraclock::DendraClockDream::new(settings.clone()));
     zoo.push(Arc::new(d));
     zoo
 }

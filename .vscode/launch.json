@@ -7,7 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'dream_spinner'",
+            "name": "Launch in display mode",
             "cargo": {
                 "args": [
                     "build",
@@ -19,7 +19,25 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["/s"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Launch in config mode",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=dream_spinner",
+                    "--package=dream_spinner"
+                ],
+                "filter": {
+                    "name": "dream_spinner",
+                    "kind": "bin"
+                }
+            },
+            "args": ["/c"],
             "cwd": "${workspaceFolder}"
         },
         {

@@ -1,22 +1,22 @@
 use display_info::DisplayInfo;
-use std::sync::{Arc, RwLock};
 
 use crate::app_settings::Settings;
 use crate::dreams::*;
 
 pub struct DreamSpinner {
     first_frame: bool,
-    settings: Arc<RwLock<Settings>>,
-    zoo: Vec<Arc<RwLock<dyn Dream>>>,
-    secondary_displays: Vec<DisplayInfo>,
+    settings: Settings,
+    zoo: Zoo,
     primary_display: DisplayInfo,
+    secondary_displays: Vec<DisplayInfo>,
 }
 
 impl DreamSpinner {
     /// Called once before the first frame.
-    pub fn new(_cc: &eframe::CreationContext<'_>, settings: Arc<RwLock<Settings>>) -> Self {
+    pub fn new(_cc: &eframe::CreationContext<'_>, settings: Settings) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+        
 
         // Detect the displays.
         let mut displays = DisplayInfo::all().unwrap();

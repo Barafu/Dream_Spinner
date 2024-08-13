@@ -1,25 +1,30 @@
 use anyhow::{Result, anyhow};
 use directories::ProjectDirs;
-use std::{collections::HashMap, fs::File, path::{Path, PathBuf}};
+use std::{collections::HashMap, fs::File, path::{Path, PathBuf}, sync::{Arc, RwLock}};
+use log;
 
-#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub type Settings = Arc<RwLock<SettingsRaw>>;
+
+#[derive(Clone, Default,Debug,serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 /// Contains all persistant settings of the application
-pub struct Settings {
+pub struct SettingsRaw {
     /// Try to detect and cover additional monitors.
     pub attempt_multiscreen: bool,
     /// Contains unique settings of particular dreams
     pub dream_settings: HashMap<String, String>,
 }
 
-impl Settings {
+impl SettingsRaw {
     pub fn read_from_file_default() -> Result<Self> {
         let path = Self::determine_settings_path()?;
+        log::info!("Reading settings from {}", path.display());
         Self::read_from_file(&path)
     }
 
     pub fn write_to_file_default(&self) -> Result<()> {
         let path = Self::determine_settings_path()?;
+        log::info!("Writing settings to {}", path.display());
         self.write_to_file(&path)
     }
 
