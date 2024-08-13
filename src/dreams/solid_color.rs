@@ -1,12 +1,9 @@
 use crate::dreams::*;
 
-
-
 pub struct SolidColorDream {
     color: egui::Color32,
     settings: Settings,
 }
-
 
 impl Dream for SolidColorDream {
     fn new(settings: Settings) -> Self {
@@ -21,13 +18,12 @@ impl Dream for SolidColorDream {
 
     fn name(&self) -> String {
         "Solid Color".to_string()
-    }   
+    }
 
-    
     fn get_type(&self) -> DreamType {
         return DreamType::Egui;
     }
-    
+
     fn dream_egui(&self, ui: &mut egui::Ui) {
         let painter = egui::Painter::new(
             ui.ctx().clone(),
@@ -36,9 +32,8 @@ impl Dream for SolidColorDream {
         );
         painter.rect_filled(ui.available_rect_before_wrap(), 0.0, self.color);
     }
-    
+
     fn config_egui(&mut self, ui: &mut egui::Ui) {
         ui.color_edit_button_srgba(&mut self.color);
     }
-
 }

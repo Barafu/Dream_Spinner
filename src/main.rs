@@ -3,8 +3,8 @@
 
 use anyhow::{bail, Result};
 use dream_spinner::app_settings::SettingsRaw;
-use dream_spinner::dreamspinner::DreamSpinner;
 use dream_spinner::dreamconfig::DreamConfigApp;
+use dream_spinner::dreamspinner::DreamSpinner;
 use std::sync::{Arc, RwLock};
 
 //Parsing CLI arguments
@@ -112,7 +112,6 @@ fn parse_args(args_in: &[String]) -> Result<ParsedArguments> {
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> anyhow::Result<()> {
-
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
     let args: Vec<String> = std::env::args().collect();
@@ -120,11 +119,10 @@ fn main() -> anyhow::Result<()> {
 
     // Load settings from file
     let settings = Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
-    
-    
+
     // Eframe result, for error messages
     let egui_result;
-    
+
     // Display dreams
     match parsed.command {
         MainCommand::Show => {
@@ -138,7 +136,6 @@ fn main() -> anyhow::Result<()> {
             // So, we detect primary monitor and create a primary window on it,
             // then we pass the list of remaining monitors to the primary window for
             // creating secondary windows.
-            
 
             let native_options = eframe::NativeOptions {
                 viewport: egui::ViewportBuilder::default()
@@ -181,11 +178,11 @@ fn main() -> anyhow::Result<()> {
             egui_result = Ok(()); //TODO
         }
     };
-    
+
     return match egui_result {
         Ok(n) => Ok(n),
         Err(e) => Err(anyhow::Error::msg(e.to_string())),
-    }
+    };
 }
 
 // When compiling to web using trunk:

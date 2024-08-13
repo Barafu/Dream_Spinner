@@ -16,7 +16,6 @@ impl DreamSpinner {
     pub fn new(_cc: &eframe::CreationContext<'_>, settings: Settings) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-        
 
         // Detect the displays.
         let mut displays = DisplayInfo::all().unwrap();

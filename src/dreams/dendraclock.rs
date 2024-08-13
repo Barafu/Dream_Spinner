@@ -1,10 +1,10 @@
+use crate::dreams::*;
+use chrono::{Local, Timelike};
 use egui::{widgets::*, *};
 use std::f32::consts::TAU;
-use chrono::{Local, Timelike};
-use crate::dreams::*;
 
 pub struct DendraClockDream {
-    local_settings: DendraClockSettings,    
+    local_settings: DendraClockSettings,
     app_settings: Settings,
 }
 
@@ -62,19 +62,18 @@ impl Dream for DendraClockDream {
     fn config_egui(&mut self, ui: &mut egui::Ui) {
         self.options_ui(ui);
     }
-    
+
     fn prepare(&self) {}
-    
+
     fn needs_loading(&self) -> bool {
         false
     }
-    
-    fn store(&self)  { }
+
+    fn store(&self) {}
 }
 
 impl DendraClockDream {
     pub fn paint_ui(&self, ui: &mut Ui) {
-               
         let painter = Painter::new(
             ui.ctx().clone(),
             ui.layer_id(),
@@ -103,14 +102,22 @@ impl DendraClockDream {
         } else {
             ui.label("The fractal_clock clock is not showing the correct time");
         };*/
-       
+
         ui.add(Slider::new(&mut self.local_settings.zoom, 0.0..=1.0).text("zoom"));
-        ui.add(Slider::new(&mut self.local_settings.start_line_width, 0.0..=5.0).text("Start line width"));
+        ui.add(
+            Slider::new(&mut self.local_settings.start_line_width, 0.0..=5.0)
+                .text("Start line width"),
+        );
         ui.add(Slider::new(&mut self.local_settings.depth, 0..=14).text("depth"));
-        ui.add(Slider::new(&mut self.local_settings.length_factor, 0.0..=1.0).text("length factor"));
-        ui.add(Slider::new(&mut self.local_settings.luminance_factor, 0.0..=1.0).text("luminance factor"));
+        ui.add(
+            Slider::new(&mut self.local_settings.length_factor, 0.0..=1.0).text("length factor"),
+        );
+        ui.add(
+            Slider::new(&mut self.local_settings.luminance_factor, 0.0..=1.0)
+                .text("luminance factor"),
+        );
         ui.add(Slider::new(&mut self.local_settings.width_factor, 0.0..=1.0).text("width factor"));
-        
+
         egui::reset_button(ui, &mut self.local_settings, "Reset");
 
         ui.hyperlink_to(
@@ -136,10 +143,8 @@ impl DendraClockDream {
             }
         }
 
-
         let now = Local::now().time();
-        let time =
-        now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
+        let time = now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
         let angle_from_period =
             |period| TAU * (time.rem_euclid(period) / period) as f32 - TAU / 4.0;
 
@@ -147,7 +152,10 @@ impl DendraClockDream {
             // Second hand:
             Hand::from_length_angle(self.local_settings.length_factor, angle_from_period(60.0)),
             // Minute hand:
-            Hand::from_length_angle(self.local_settings.length_factor, angle_from_period(60.0 * 60.0)),
+            Hand::from_length_angle(
+                self.local_settings.length_factor,
+                angle_from_period(60.0 * 60.0),
+            ),
             // Hour hand:
             Hand::from_length_angle(0.5, angle_from_period(12.0 * 60.0 * 60.0)),
         ];
@@ -156,7 +164,10 @@ impl DendraClockDream {
 
         let rect = painter.clip_rect();
         let to_screen = emath::RectTransform::from_to(
-            Rect::from_center_size(Pos2::ZERO, rect.square_proportions() / self.local_settings.zoom),
+            Rect::from_center_size(
+                Pos2::ZERO,
+                rect.square_proportions() / self.local_settings.zoom,
+            ),
             rect,
         );
 

@@ -1,8 +1,8 @@
 use crate::app_settings::Settings;
 use std::sync::{Arc, RwLock};
 
-mod solid_color;
 mod dendraclock;
+mod solid_color;
 
 /// For giggles, I call the collection of all dream types "zoo"
 pub type Zoo = Vec<Arc<RwLock<dyn Dream>>>;
@@ -47,7 +47,7 @@ pub trait Dream: Sync + Send {
     }
 
     /// Makes dream to serialise its config and strore it in Settings.
-    fn store(&self)  { }
+    fn store(&self) {}
 }
 
 pub fn build_zoo(settings: Settings) -> Zoo {

@@ -1,11 +1,16 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
-use std::{collections::HashMap, fs::File, path::{Path, PathBuf}, sync::{Arc, RwLock}};
 use log;
+use std::{
+    collections::HashMap,
+    fs::File,
+    path::{Path, PathBuf},
+    sync::{Arc, RwLock},
+};
 
 pub type Settings = Arc<RwLock<SettingsRaw>>;
 
-#[derive(Clone, Default,Debug,serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Default, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 /// Contains all persistant settings of the application
 pub struct SettingsRaw {
