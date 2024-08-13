@@ -3,7 +3,6 @@ name = "dream_spinner"
 version = "0.1.0"
 authors = ["Barafu Albino <barafu_develops@albino.email>"]
 edition = "2021"
-include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 rust-version = "1.76"
 
 [package.metadata.docs.rs]
@@ -18,7 +17,6 @@ eframe = { version = "0.28", default-features = false, features = [
 ] }
 log = "0.4"
 
-# You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 anyhow = "1.0.86"

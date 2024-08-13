@@ -29,7 +29,7 @@ pub trait Dream: Sync + Send {
     fn get_type(&self) -> DreamType;
 
     /// Draws the dream in egui. This function MUST be thread-safe.
-    fn dream_egui(&mut self, _ui: &mut egui::Ui) {
+    fn dream_egui(&self, _ui: &mut egui::Ui) {
         unimplemented!("EGUI rendering called, but not implemented");
     }
 

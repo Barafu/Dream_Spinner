@@ -4,8 +4,6 @@ use chrono::{Local, Timelike};
 use crate::dreams::*;
 
 pub struct DendraClock {
-    paused: bool,
-    time: f64,
     local_settings: DendraClockSettings,    
     app_settings: Arc<RwLock<Settings>>,
 }
@@ -48,8 +46,6 @@ impl Dream for DendraClock {
     fn new(settings: Arc<RwLock<Settings>>) -> Self {
         let local_settings = DendraClockSettings::default();
         Self {
-            paused: false,
-            time: 0.0,
             local_settings,
             app_settings: settings,
         }
@@ -59,7 +55,7 @@ impl Dream for DendraClock {
         return DreamType::Egui;
     }
 
-    fn dream_egui(&mut self, ui: &mut egui::Ui) {
+    fn dream_egui(&self, ui: &mut egui::Ui) {
         self.paint_ui(ui);
     }
 
@@ -77,11 +73,8 @@ impl Dream for DendraClock {
 }
 
 impl DendraClock {
-    pub fn paint_ui(&mut self, ui: &mut Ui) {
-        let now = Local::now().time();
-        self.time =
-        now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
-        
+    pub fn paint_ui(&self, ui: &mut Ui) {
+               
         let painter = Painter::new(
             ui.ctx().clone(),
             ui.layer_id(),
@@ -126,7 +119,7 @@ impl DendraClock {
         );
     }
 
-    fn paint(&mut self, painter: &Painter) {
+    fn paint(&self, painter: &Painter) {
         struct Hand {
             length: f32,
             angle: f32,
@@ -143,8 +136,12 @@ impl DendraClock {
             }
         }
 
+
+        let now = Local::now().time();
+        let time =
+        now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
         let angle_from_period =
-            |period| TAU * (self.time.rem_euclid(period) / period) as f32 - TAU / 4.0;
+            |period| TAU * (time.rem_euclid(period) / period) as f32 - TAU / 4.0;
 
         let hands = [
             // Second hand:
@@ -237,7 +234,7 @@ impl DendraClock {
 
             std::mem::swap(&mut nodes, &mut new_nodes);
         }
-        self.local_settings.line_count = shapes.len();
+        //self.local_settings.line_count = shapes.len();
         painter.extend(shapes);
     }
 }

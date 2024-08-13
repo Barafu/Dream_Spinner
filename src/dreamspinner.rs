@@ -18,15 +18,9 @@ impl DreamSpinner {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        // if let Some(storage) = cc.storage {
-        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        // }
-
         // Detect the displays.
         let mut displays = DisplayInfo::all().unwrap();
-        if displays.len() == 0 {
+        if displays.is_empty() {
             panic!("Can't find any displays");
         }
         // Find primary display
@@ -86,14 +80,17 @@ impl eframe::App for DreamSpinner {
 
                 let thread_dream_arc = active_dream.clone();
 
-                ctx.show_viewport_deferred(viewport_id, viewport_builder, move |ctx, class| {
+                // Uncomment one or another
+                ctx.show_viewport_immediate(viewport_id, viewport_builder, move |ctx, class| {
+                    //ctx.show_viewport_deferred(viewport_id, viewport_builder, move |ctx, class| {
                     assert!(
-                        class == egui::ViewportClass::Deferred,
+                        class == egui::ViewportClass::Deferred
+                            || class == egui::ViewportClass::Immediate,
                         "This egui backend doesn't support multiple viewports"
                     );
 
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        let mut painter = thread_dream_arc.write().unwrap();
+                        let painter = thread_dream_arc.read().unwrap();
                         painter.dream_egui(ui);
                         DreamSpinner::set_input(ui);
                     });
@@ -102,7 +99,7 @@ impl eframe::App for DreamSpinner {
                 ctx.request_repaint_of(primary_viewport_id);
             }
             // Paint primary window
-            active_dream.write().unwrap().dream_egui(ui);
+            active_dream.read().unwrap().dream_egui(ui);
             DreamSpinner::set_input(ui);
             ctx.request_repaint();
         });
@@ -110,7 +107,7 @@ impl eframe::App for DreamSpinner {
 }
 
 impl DreamSpinner {
-    fn set_input( ui: &mut egui::Ui) {
+    fn set_input(ui: &mut egui::Ui) {
         ui.input(|input| {
             if input.pointer.any_released() {
                 std::process::exit(0);

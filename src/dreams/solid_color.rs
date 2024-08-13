@@ -28,7 +28,7 @@ impl Dream for SolidColorDream {
         return DreamType::Egui;
     }
     
-    fn dream_egui(&mut self, ui: &mut egui::Ui) {
+    fn dream_egui(&self, ui: &mut egui::Ui) {
         let painter = egui::Painter::new(
             ui.ctx().clone(),
             ui.layer_id(),
