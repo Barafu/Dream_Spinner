@@ -1,8 +1,12 @@
+use std::collections::VecDeque;
+use std::time::Duration;
+
 use display_info::DisplayInfo;
-use egui::viewport;
 
 use crate::app_settings::Settings;
 use crate::dreams::*;
+
+const RENDER_MEASURE_SIZE: usize = 100;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Debug)]
@@ -19,6 +23,7 @@ pub struct DreamSpinner {
     primary_display: DisplayInfo,
     secondary_displays: Vec<DisplayInfo>,
     viewport_mode: ViewportMode,
+    render_durations: VecDeque<Duration>,
 }
 
 impl DreamSpinner {
@@ -37,6 +42,7 @@ impl DreamSpinner {
             displays.iter().position(|d| d.is_primary).unwrap();
         let primary_display = displays.swap_remove(primary_position);
         displays.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
+        //displays.extend_from_within(..displays.len());
         // List secondary monitors for creating additional windows.
         let secondary_displays =
             match settings.read().unwrap().attempt_multiscreen {
@@ -53,6 +59,7 @@ impl DreamSpinner {
             primary_display,
             secondary_displays,
             viewport_mode: ViewportMode::Immediate,
+            render_durations: VecDeque::with_capacity(RENDER_MEASURE_SIZE),
         }
     }
 }
@@ -60,6 +67,7 @@ impl DreamSpinner {
 impl eframe::App for DreamSpinner {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let timer = std::time::Instant::now();
         let active_dream = self.zoo[1].clone();
         active_dream.write().unwrap().prepare();
         // Get information on all displays
@@ -80,7 +88,7 @@ impl eframe::App for DreamSpinner {
         }
         egui::CentralPanel::default().show(ctx, |ui| {
             // Create secondary windows
-            for display in self.secondary_displays.iter() {
+            for (pos, display) in self.secondary_displays.iter().enumerate() {
                 let viewport_builder = egui::ViewportBuilder::default()
                     .with_position([
                         display.x as f32 / display.scale_factor,
@@ -89,13 +97,12 @@ impl eframe::App for DreamSpinner {
                     .with_fullscreen(true)
                     .with_taskbar(false)
                     .with_drag_and_drop(false);
-                let viewport_id = egui::ViewportId::from_hash_of(display.id);
+                let viewport_id = egui::ViewportId::from_hash_of(display.id * pos as u32);
 
                 let thread_dream_arc = active_dream.clone();
 
                 match self.viewport_mode {
                     ViewportMode::Immediate => {
-                        // Uncomment one or another
                         ctx.show_viewport_immediate(
                             viewport_id,
                             viewport_builder,
@@ -115,16 +122,40 @@ impl eframe::App for DreamSpinner {
                         );
                     }
                     ViewportMode::Deferred => {
-                        unimplemented!();
+                        ctx.show_viewport_deferred(
+                            viewport_id,
+                            viewport_builder,
+                            move |ctx, class| {
+                                assert!(
+                                    class == egui::ViewportClass::Deferred,
+                                    "This egui backend doesn't support multiple viewports"
+                                );
+
+                                egui::CentralPanel::default().show(ctx, |ui| {
+                                    let painter = thread_dream_arc.read().unwrap();
+                                    painter.dream_egui(ui);
+                                    DreamSpinner::set_input(ui);
+                                    request_updates(ui);
+                                });
+                            },
+                        );
                     }
                 }
             }
             // Paint primary window
+            let (avg, worst) = analyze_render_durations(&self.render_durations);
+            ui.label(format!("Average: {:.4}  Worst: {:.4}", avg, worst));
             active_dream.read().unwrap().dream_egui(ui);
             DreamSpinner::set_input(ui);
             match self.viewport_mode {
                 ViewportMode::Immediate => ctx.request_repaint(),
                 ViewportMode::Deferred => request_updates(ui),
+            }
+
+            // Log render time
+            self.render_durations.push_back(timer.elapsed());
+            if self.render_durations.len() > RENDER_MEASURE_SIZE {
+                self.render_durations.pop_front();
             }
         });
     }
@@ -160,4 +191,14 @@ fn request_updates(ui: &mut egui::Ui) {
     for id in ids {
         ui.ctx().request_repaint_of(id);
     }
+}
+
+fn analyze_render_durations(dur: &VecDeque<Duration>) -> (f64, f64) {
+    if dur.len() < RENDER_MEASURE_SIZE {
+        return (0.0, 0.0);
+    }
+    let sum: Duration = dur.iter().sum();
+    let avg = sum.as_secs_f64() / dur.len() as f64;
+    let worst = dur.iter().max().unwrap_or(&Duration::ZERO).as_secs_f64();
+    (1.0 / avg, 1.0 / worst)
 }
