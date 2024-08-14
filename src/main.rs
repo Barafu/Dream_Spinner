@@ -118,7 +118,8 @@ fn main() -> anyhow::Result<()> {
     let parsed = parse_args(&args).unwrap();
 
     // Load settings from file
-    let settings = Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
+    let settings =
+        Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
 
     // Eframe result, for error messages
     let egui_result;
@@ -156,7 +157,9 @@ fn main() -> anyhow::Result<()> {
             egui_result = eframe::run_native(
                 "DreamSpinner",
                 native_options,
-                Box::new(|cc| Ok(Box::new(DreamSpinner::new(cc, settings_clone)))),
+                Box::new(|cc| {
+                    Ok(Box::new(DreamSpinner::new(cc, settings_clone)))
+                }),
             );
             settings.write().unwrap().write_to_file_default()?;
         }
@@ -198,7 +201,9 @@ fn main() {
             .start(
                 "the_canvas_id",
                 web_options,
-                Box::new(|cc| Ok(Box::new(dream_spinner::DreamSpinner::new(cc)))),
+                Box::new(|cc| {
+                    Ok(Box::new(dream_spinner::DreamSpinner::new(cc)))
+                }),
             )
             .await;
 

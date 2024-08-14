@@ -45,10 +45,7 @@ impl Dream for DendraClockDream {
 
     fn new(settings: Settings) -> Self {
         let local_settings = DendraClockSettings::default();
-        Self {
-            dream_settings: local_settings,
-            app_settings: settings,
-        }
+        Self { dream_settings: local_settings, app_settings: settings }
     }
 
     fn get_type(&self) -> DreamType {
@@ -64,8 +61,15 @@ impl Dream for DendraClockDream {
     }
 
     fn prepare(&mut self) {
-         let txt = self.app_settings.read().unwrap().dream_settings.get(&self.id()).cloned().unwrap_or_default();
-         self.dream_settings = toml::from_str(&txt).unwrap_or_default();
+        let txt = self
+            .app_settings
+            .read()
+            .unwrap()
+            .dream_settings
+            .get(&self.id())
+            .cloned()
+            .unwrap_or_default();
+        self.dream_settings = toml::from_str(&txt).unwrap_or_default();
     }
 
     fn needs_loading(&self) -> bool {
@@ -95,21 +99,28 @@ impl DendraClockDream {
     }
 
     fn options_ui(&mut self, ui: &mut Ui) {
-
-        ui.add(Slider::new(&mut self.dream_settings.zoom, 0.0..=1.0).text("zoom"));
+        ui.add(
+            Slider::new(&mut self.dream_settings.zoom, 0.0..=1.0).text("zoom"),
+        );
         ui.add(
             Slider::new(&mut self.dream_settings.start_line_width, 0.0..=5.0)
                 .text("Start line width"),
         );
-        ui.add(Slider::new(&mut self.dream_settings.depth, 0..=14).text("depth"));
         ui.add(
-            Slider::new(&mut self.dream_settings.length_factor, 0.0..=1.0).text("length factor"),
+            Slider::new(&mut self.dream_settings.depth, 0..=14).text("depth"),
+        );
+        ui.add(
+            Slider::new(&mut self.dream_settings.length_factor, 0.0..=1.0)
+                .text("length factor"),
         );
         ui.add(
             Slider::new(&mut self.dream_settings.luminance_factor, 0.0..=1.0)
                 .text("luminance factor"),
         );
-        ui.add(Slider::new(&mut self.dream_settings.width_factor, 0.0..=1.0).text("width factor"));
+        ui.add(
+            Slider::new(&mut self.dream_settings.width_factor, 0.0..=1.0)
+                .text("width factor"),
+        );
 
         egui::reset_button(ui, &mut self.dream_settings, "Reset");
 
@@ -128,22 +139,23 @@ impl DendraClockDream {
 
         impl Hand {
             fn from_length_angle(length: f32, angle: f32) -> Self {
-                Self {
-                    length,
-                    angle,
-                    vec: length * Vec2::angled(angle),
-                }
+                Self { length, angle, vec: length * Vec2::angled(angle) }
             }
         }
 
         let now = Local::now().time();
-        let time = now.num_seconds_from_midnight() as f64 + now.nanosecond() as f64 * 1e-9;
-        let angle_from_period =
-            |period| TAU * (time.rem_euclid(period) / period) as f32 - TAU / 4.0;
+        let time = now.num_seconds_from_midnight() as f64
+            + now.nanosecond() as f64 * 1e-9;
+        let angle_from_period = |period| {
+            TAU * (time.rem_euclid(period) / period) as f32 - TAU / 4.0
+        };
 
         let hands = [
             // Second hand:
-            Hand::from_length_angle(self.dream_settings.length_factor, angle_from_period(60.0)),
+            Hand::from_length_angle(
+                self.dream_settings.length_factor,
+                angle_from_period(60.0),
+            ),
             // Minute hand:
             Hand::from_length_angle(
                 self.dream_settings.length_factor,
@@ -196,12 +208,13 @@ impl DendraClockDream {
         for (i, hand) in hands.iter().enumerate() {
             let center = pos2(0.0, 0.0);
             let end = center + hand.vec;
-            paint_line([center, end], Color32::from_additive_luminance(255), width);
+            paint_line(
+                [center, end],
+                Color32::from_additive_luminance(255),
+                width,
+            );
             if i < 2 {
-                nodes.push(Node {
-                    pos: end,
-                    dir: hand.vec,
-                });
+                nodes.push(Node { pos: end, dir: hand.vec });
             }
         }
 
@@ -223,10 +236,7 @@ impl DendraClockDream {
             for &rotor in &hand_rotors {
                 for a in &nodes {
                     let new_dir = rotor * a.dir;
-                    let b = Node {
-                        pos: a.pos + new_dir,
-                        dir: new_dir,
-                    };
+                    let b = Node { pos: a.pos + new_dir, dir: new_dir };
                     paint_line(
                         [a.pos, b.pos],
                         Color32::from_additive_luminance(luminance_u8),

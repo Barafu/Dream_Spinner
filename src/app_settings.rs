@@ -58,8 +58,10 @@ impl SettingsRaw {
             return Ok(settings_file);
         }
 
-        let user_dirs = ProjectDirs::from("goo", "Barafu Albino", "Dream Spinner")
-            .ok_or(anyhow!("Can not detect settings directory in user folder"))?;
+        let user_dirs =
+            ProjectDirs::from("goo", "Barafu Albino", "Dream Spinner").ok_or(
+                anyhow!("Can not detect settings directory in user folder"),
+            )?;
         let settings_dir = user_dirs.config_dir();
         let settings_file = settings_dir.join(SETTINGS_FILE_NAME);
         if settings_file.is_file() {

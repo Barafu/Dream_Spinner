@@ -29,21 +29,32 @@ impl eframe::App for DreamConfigApp {
         let mut cancel = false;
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Close").clicked() {
-                        cancel = true;
-                    };
-                    if ui.button("Save").clicked() {
-                        save = true;
-                    };
-                });
+                ui.with_layout(
+                    egui::Layout::right_to_left(egui::Align::Center),
+                    |ui| {
+                        if ui.button("Close").clicked() {
+                            cancel = true;
+                        };
+                        if ui.button("Save").clicked() {
+                            save = true;
+                        };
+                    },
+                );
             });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.selectable_value(&mut self.active_panel, ActivePanel::Generic, "Settings");
-                    ui.selectable_value(&mut self.active_panel, ActivePanel::About, "About");
+                    ui.selectable_value(
+                        &mut self.active_panel,
+                        ActivePanel::Generic,
+                        "Settings",
+                    );
+                    ui.selectable_value(
+                        &mut self.active_panel,
+                        ActivePanel::About,
+                        "About",
+                    );
                     for dream in self.zoo.iter() {
                         ui.selectable_value(
                             &mut self.active_panel,
@@ -80,16 +91,13 @@ impl eframe::App for DreamConfigApp {
 impl DreamConfigApp {
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Result<Self> {
         // Load settings from file
-        let settings = Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
+        let settings =
+            Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
         let zoo = build_zoo(settings.clone());
         for dream in zoo.iter() {
             dream.write().unwrap().prepare();
         }
-        Ok(Self {
-            settings,
-            active_panel: ActivePanel::Generic,
-            zoo,
-        })
+        Ok(Self { settings, active_panel: ActivePanel::Generic, zoo })
     }
 
     fn save(&mut self) {

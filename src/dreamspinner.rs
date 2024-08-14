@@ -33,14 +33,16 @@ impl DreamSpinner {
             panic!("Can't find any displays");
         }
         // Find primary display
-        let primary_position = displays.iter().position(|d| d.is_primary).unwrap();
+        let primary_position =
+            displays.iter().position(|d| d.is_primary).unwrap();
         let primary_display = displays.swap_remove(primary_position);
         displays.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
         // List secondary monitors for creating additional windows.
-        let secondary_displays = match settings.read().unwrap().attempt_multiscreen {
-            true => displays,
-            false => Vec::new(),
-        };
+        let secondary_displays =
+            match settings.read().unwrap().attempt_multiscreen {
+                true => displays,
+                false => Vec::new(),
+            };
 
         let zoo = build_zoo(settings.clone());
 
@@ -67,8 +69,10 @@ impl eframe::App for DreamSpinner {
 
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(
                 [
-                    self.primary_display.x as f32 / self.primary_display.scale_factor,
-                    self.primary_display.y as f32 / self.primary_display.scale_factor,
+                    self.primary_display.x as f32
+                        / self.primary_display.scale_factor,
+                    self.primary_display.y as f32
+                        / self.primary_display.scale_factor,
                 ]
                 .into(),
             ));
@@ -122,9 +126,7 @@ impl eframe::App for DreamSpinner {
                 ViewportMode::Immediate => ctx.request_repaint(),
                 ViewportMode::Deferred => request_updates(ui),
             }
-            
         });
-
     }
 }
 
@@ -143,8 +145,7 @@ impl DreamSpinner {
                 ids = i.raw.viewports.keys().cloned().collect();
             });
             for id in ids {
-                ui.ctx()
-                    .send_viewport_cmd_to(id, egui::ViewportCommand::Close);
+                ui.ctx().send_viewport_cmd_to(id, egui::ViewportCommand::Close);
             }
         }
     }

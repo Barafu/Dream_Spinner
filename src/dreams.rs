@@ -19,11 +19,11 @@ pub trait Dream: Sync + Send {
         Self: Sized;
 
     /// Returns the unique ID of the dream
-    /// 
+    ///
     /// Should be lowercase with underscores, like "dream_of_sheep"
     fn id(&self) -> DreamId;
-    
-    /// Gives the name to display in UI. The name also serves as ID, including 
+
+    /// Gives the name to display in UI. The name also serves as ID, including
     /// in settings, so it must be unique
     fn name(&self) -> String;
 
@@ -62,6 +62,9 @@ pub fn build_zoo(settings: Settings) -> Zoo {
 }
 
 // Pick a dream from zoo by its id.
-pub fn select_dream_by_id(zoo: &Zoo, id: &DreamId) -> Option<Arc<RwLock<dyn Dream>>> {
+pub fn select_dream_by_id(
+    zoo: &Zoo,
+    id: &DreamId,
+) -> Option<Arc<RwLock<dyn Dream>>> {
     zoo.iter().find(|d| d.read().unwrap().id() == *id).map(|d| d.clone())
 }

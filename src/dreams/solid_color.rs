@@ -1,6 +1,6 @@
 use crate::dreams::*;
 
-/// This dream is intended to be as primitive as possible to serve as example 
+/// This dream is intended to be as primitive as possible to serve as example
 /// of how to implement Dream trait.
 pub struct SolidColorDream {
     stored_settings: SolidColorSettings,
@@ -16,9 +16,7 @@ struct SolidColorSettings {
 
 impl Default for SolidColorSettings {
     fn default() -> Self {
-        Self {
-            color_hex: "#635147".to_string(),
-        }
+        Self { color_hex: "#635147".to_string() }
     }
 }
 
@@ -56,9 +54,17 @@ impl Dream for SolidColorDream {
     }
 
     fn prepare(&mut self) {
-        let txt = self.app_settings.read().unwrap().dream_settings.get(&self.id()).cloned().unwrap_or_default();
-         self.stored_settings = toml::from_str(&txt).unwrap_or_default();
-         self.color = egui::Color32::from_hex(&self.stored_settings.color_hex).unwrap_or_default();
+        let txt = self
+            .app_settings
+            .read()
+            .unwrap()
+            .dream_settings
+            .get(&self.id())
+            .cloned()
+            .unwrap_or_default();
+        self.stored_settings = toml::from_str(&txt).unwrap_or_default();
+        self.color = egui::Color32::from_hex(&self.stored_settings.color_hex)
+            .unwrap_or_default();
     }
 
     fn store(&self) {
