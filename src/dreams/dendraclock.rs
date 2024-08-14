@@ -4,7 +4,7 @@ use egui::{widgets::*, *};
 use std::f32::consts::TAU;
 
 pub struct DendraClockDream {
-    local_settings: DendraClockSettings,
+    dream_settings: DendraClockSettings,
     app_settings: Settings,
 }
 
@@ -35,8 +35,8 @@ impl Default for DendraClockSettings {
 }
 
 impl Dream for DendraClockDream {
-    fn id(&self) -> u32 {
-        1041127
+    fn id(&self) -> DreamId {
+        "fractal_clock".to_string()
     }
 
     fn name(&self) -> String {
@@ -46,7 +46,7 @@ impl Dream for DendraClockDream {
     fn new(settings: Settings) -> Self {
         let local_settings = DendraClockSettings::default();
         Self {
-            local_settings,
+            dream_settings: local_settings,
             app_settings: settings,
         }
     }
@@ -63,13 +63,23 @@ impl Dream for DendraClockDream {
         self.options_ui(ui);
     }
 
-    fn prepare(&self) {}
+    fn prepare(&mut self) {
+         let txt = self.app_settings.read().unwrap().dream_settings.get(&self.id()).cloned().unwrap_or_default();
+         self.dream_settings = toml::from_str(&txt).unwrap_or_default();
+    }
 
     fn needs_loading(&self) -> bool {
         false
     }
 
-    fn store(&self) {}
+    fn store(&self) {
+        let txt = toml::to_string(&self.dream_settings).unwrap();
+        self.app_settings
+            .write()
+            .unwrap()
+            .dream_settings
+            .insert(self.id(), txt);
+    }
 }
 
 impl DendraClockDream {
@@ -82,43 +92,26 @@ impl DendraClockDream {
         self.paint(&painter);
         // Make sure we allocate what we used (everything)
         ui.expand_to_include_rect(painter.clip_rect());
-
-        // Tell UI to paint next frame as soon as possible.
-        /*if !self.paused {
-            ui.ctx().request_repaint();
-        }*/
     }
 
     fn options_ui(&mut self, ui: &mut Ui) {
-        //ui.label(format!("Local time: {:02}:{:02}:{:02}.{:03}", (self.time % (24.0 * 60.0 * 60.0) / 3600.0).floor(), (self.time % (60.0 * 60.0) / 60.0).floor(), (self.time % 60.0).floor(), (self.time % 1.0 * 100.0).floor()));
-        /*if seconds_since_midnight.is_some() {
-            ui.label(format!(
-                "Local time: {:02}:{:02}:{:02}.{:03}",
-                (self.time % (24.0 * 60.0 * 60.0) / 3600.0).floor(),
-                (self.time % (60.0 * 60.0) / 60.0).floor(),
-                (self.time % 60.0).floor(),
-                (self.time % 1.0 * 100.0).floor()
-            ));
-        } else {
-            ui.label("The fractal_clock clock is not showing the correct time");
-        };*/
 
-        ui.add(Slider::new(&mut self.local_settings.zoom, 0.0..=1.0).text("zoom"));
+        ui.add(Slider::new(&mut self.dream_settings.zoom, 0.0..=1.0).text("zoom"));
         ui.add(
-            Slider::new(&mut self.local_settings.start_line_width, 0.0..=5.0)
+            Slider::new(&mut self.dream_settings.start_line_width, 0.0..=5.0)
                 .text("Start line width"),
         );
-        ui.add(Slider::new(&mut self.local_settings.depth, 0..=14).text("depth"));
+        ui.add(Slider::new(&mut self.dream_settings.depth, 0..=14).text("depth"));
         ui.add(
-            Slider::new(&mut self.local_settings.length_factor, 0.0..=1.0).text("length factor"),
+            Slider::new(&mut self.dream_settings.length_factor, 0.0..=1.0).text("length factor"),
         );
         ui.add(
-            Slider::new(&mut self.local_settings.luminance_factor, 0.0..=1.0)
+            Slider::new(&mut self.dream_settings.luminance_factor, 0.0..=1.0)
                 .text("luminance factor"),
         );
-        ui.add(Slider::new(&mut self.local_settings.width_factor, 0.0..=1.0).text("width factor"));
+        ui.add(Slider::new(&mut self.dream_settings.width_factor, 0.0..=1.0).text("width factor"));
 
-        egui::reset_button(ui, &mut self.local_settings, "Reset");
+        egui::reset_button(ui, &mut self.dream_settings, "Reset");
 
         ui.hyperlink_to(
             "Inspired by a screensaver by Rob Mayoff",
@@ -150,10 +143,10 @@ impl DendraClockDream {
 
         let hands = [
             // Second hand:
-            Hand::from_length_angle(self.local_settings.length_factor, angle_from_period(60.0)),
+            Hand::from_length_angle(self.dream_settings.length_factor, angle_from_period(60.0)),
             // Minute hand:
             Hand::from_length_angle(
-                self.local_settings.length_factor,
+                self.dream_settings.length_factor,
                 angle_from_period(60.0 * 60.0),
             ),
             // Hour hand:
@@ -166,7 +159,7 @@ impl DendraClockDream {
         let to_screen = emath::RectTransform::from_to(
             Rect::from_center_size(
                 Pos2::ZERO,
-                rect.square_proportions() / self.local_settings.zoom,
+                rect.square_proportions() / self.dream_settings.zoom,
             ),
             rect,
         );
@@ -196,9 +189,9 @@ impl DendraClockDream {
             dir: Vec2,
         }
 
-        let mut nodes = Vec::with_capacity(self.local_settings.line_count);
+        let mut nodes = Vec::with_capacity(self.dream_settings.line_count);
 
-        let mut width = self.local_settings.start_line_width;
+        let mut width = self.dream_settings.start_line_width;
 
         for (i, hand) in hands.iter().enumerate() {
             let center = pos2(0.0, 0.0);
@@ -215,12 +208,12 @@ impl DendraClockDream {
         let mut luminance = 0.7; // Start dimmer than main hands
 
         let mut new_nodes = Vec::new();
-        for _ in 0..self.local_settings.depth {
+        for _ in 0..self.dream_settings.depth {
             new_nodes.clear();
             new_nodes.reserve(nodes.len() * 2);
 
-            luminance *= self.local_settings.luminance_factor;
-            width *= self.local_settings.width_factor;
+            luminance *= self.dream_settings.luminance_factor;
+            width *= self.dream_settings.width_factor;
 
             let luminance_u8 = (255.0 * luminance).round() as u8;
             if luminance_u8 == 0 {
@@ -245,7 +238,6 @@ impl DendraClockDream {
 
             std::mem::swap(&mut nodes, &mut new_nodes);
         }
-        //self.local_settings.line_count = shapes.len();
         painter.extend(shapes);
     }
 }

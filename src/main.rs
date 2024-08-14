@@ -126,8 +126,8 @@ fn main() -> anyhow::Result<()> {
     // Display dreams
     match parsed.command {
         MainCommand::Show => {
-            let settings_2 = settings.clone();
-            settings_2.write().unwrap().attempt_multiscreen = true;
+            let settings_clone = settings.clone();
+            settings_clone.write().unwrap().attempt_multiscreen = true;
             // DreamSpinner supports multiple displays. In OS, there are concepts of
             // a primary display and secondary displays. In eframe, there are primary
             // window and secondary windows. Secondary windows have to be created from
@@ -156,7 +156,7 @@ fn main() -> anyhow::Result<()> {
             egui_result = eframe::run_native(
                 "DreamSpinner",
                 native_options,
-                Box::new(|cc| Ok(Box::new(DreamSpinner::new(cc, settings_2)))),
+                Box::new(|cc| Ok(Box::new(DreamSpinner::new(cc, settings_clone)))),
             );
             settings.write().unwrap().write_to_file_default()?;
         }

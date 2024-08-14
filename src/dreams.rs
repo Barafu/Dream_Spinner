@@ -6,6 +6,7 @@ mod solid_color;
 
 /// For giggles, I call the collection of all dream types "zoo"
 pub type Zoo = Vec<Arc<RwLock<dyn Dream>>>;
+pub type DreamId = String;
 
 #[derive(PartialEq, Debug)]
 pub enum DreamType {
@@ -16,17 +17,18 @@ pub trait Dream: Sync + Send {
     fn new(settings: Settings) -> Self
     where
         Self: Sized;
-    /// Gives unique ID of the dream. Must be a unique literal between 0 and 429496729
-    /// If you have Python, run
-    /// ```python
-    ///     python -c "import random; print (random.randrange(429496729))"
-    /// ```
-    fn id(&self) -> u32;
-    /// Gives the name to display in UI
+
+    /// Returns the unique ID of the dream
+    /// 
+    /// Should be lowercase with underscores, like "dream_of_sheep"
+    fn id(&self) -> DreamId;
+    
+    /// Gives the name to display in UI. The name also serves as ID, including 
+    /// in settings, so it must be unique
     fn name(&self) -> String;
 
     /// Prepare dream for rendering (load resources, initialize RNG etc.)    
-    fn prepare(&self) {}
+    fn prepare(&mut self) {}
 
     /// Return true if prepare() takes noticeable time enough to warrant a loading screen
     fn needs_loading(&self) -> bool {
@@ -57,4 +59,9 @@ pub fn build_zoo(settings: Settings) -> Zoo {
     let d = RwLock::new(dendraclock::DendraClockDream::new(settings.clone()));
     zoo.push(Arc::new(d));
     zoo
+}
+
+// Pick a dream from zoo by its id.
+pub fn select_dream_by_id(zoo: &Zoo, id: &DreamId) -> Option<Arc<RwLock<dyn Dream>>> {
+    zoo.iter().find(|d| d.read().unwrap().id() == *id).map(|d| d.clone())
 }

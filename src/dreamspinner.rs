@@ -1,14 +1,24 @@
 use display_info::DisplayInfo;
+use egui::viewport;
 
 use crate::app_settings::Settings;
 use crate::dreams::*;
 
+#[allow(dead_code)]
+#[derive(PartialEq, Debug)]
+enum ViewportMode {
+    Immediate,
+    Deferred,
+}
+
 pub struct DreamSpinner {
     first_frame: bool,
+    #[allow(dead_code)]
     settings: Settings,
     zoo: Zoo,
     primary_display: DisplayInfo,
     secondary_displays: Vec<DisplayInfo>,
+    viewport_mode: ViewportMode,
 }
 
 impl DreamSpinner {
@@ -40,6 +50,7 @@ impl DreamSpinner {
             zoo,
             primary_display,
             secondary_displays,
+            viewport_mode: ViewportMode::Immediate,
         }
     }
 }
@@ -48,9 +59,8 @@ impl eframe::App for DreamSpinner {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let active_dream = self.zoo[1].clone();
+        active_dream.write().unwrap().prepare();
         // Get information on all displays
-
-        let primary_viewport_id = ctx.viewport_id();
 
         if self.first_frame {
             self.first_frame = false;
@@ -79,53 +89,74 @@ impl eframe::App for DreamSpinner {
 
                 let thread_dream_arc = active_dream.clone();
 
-                // Uncomment one or another
-                ctx.show_viewport_immediate(viewport_id, viewport_builder, move |ctx, class| {
-                    //ctx.show_viewport_deferred(viewport_id, viewport_builder, move |ctx, class| {
-                    assert!(
-                        class == egui::ViewportClass::Deferred
-                            || class == egui::ViewportClass::Immediate,
-                        "This egui backend doesn't support multiple viewports"
-                    );
+                match self.viewport_mode {
+                    ViewportMode::Immediate => {
+                        // Uncomment one or another
+                        ctx.show_viewport_immediate(
+                            viewport_id,
+                            viewport_builder,
+                            move |ctx, class| {
+                                assert!(
+                                    class == egui::ViewportClass::Immediate,
+                                    "This egui backend doesn't support multiple viewports"
+                                );
 
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        let painter = thread_dream_arc.read().unwrap();
-                        painter.dream_egui(ui);
-                        DreamSpinner::set_input(ui);
-                    });
-                });
-                ctx.request_repaint_of(viewport_id);
-                ctx.request_repaint_of(primary_viewport_id);
+                                egui::CentralPanel::default().show(ctx, |ui| {
+                                    let painter = thread_dream_arc.read().unwrap();
+                                    painter.dream_egui(ui);
+                                    DreamSpinner::set_input(ui);
+                                    // No need to force updates of secondary viewports in immediate mode
+                                });
+                            },
+                        );
+                    }
+                    ViewportMode::Deferred => {
+                        unimplemented!();
+                    }
+                }
             }
             // Paint primary window
             active_dream.read().unwrap().dream_egui(ui);
             DreamSpinner::set_input(ui);
-            ctx.request_repaint();
+            match self.viewport_mode {
+                ViewportMode::Immediate => ctx.request_repaint(),
+                ViewportMode::Deferred => request_updates(ui),
+            }
+            
         });
+
     }
 }
 
 impl DreamSpinner {
     fn set_input(ui: &mut egui::Ui) {
+        let mut need_quit = false;
         ui.input(|input| {
             if input.pointer.any_released() {
-                std::process::exit(0);
+                need_quit = true;
             }
         });
         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::None);
+        if need_quit {
+            let mut ids: Vec<egui::ViewportId> = Vec::new();
+            ui.ctx().input(|i| {
+                ids = i.raw.viewports.keys().cloned().collect();
+            });
+            for id in ids {
+                ui.ctx()
+                    .send_viewport_cmd_to(id, egui::ViewportCommand::Close);
+            }
+        }
     }
 }
 
-/*fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
+// Detects all viewports and requests updates to all of them
+fn request_updates(ui: &mut egui::Ui) {
+    let mut ids: Vec<egui::ViewportId> = Vec::new();
+    ui.ctx().input(|i| {
+        ids = i.raw.viewports.keys().cloned().collect();
     });
-}*/
+    for id in ids {
+        ui.ctx().request_repaint_of(id);
+    }
+}
