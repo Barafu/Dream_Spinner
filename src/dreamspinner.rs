@@ -1,18 +1,56 @@
-use std::collections::VecDeque;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use display_info::DisplayInfo;
 
 use crate::app_settings::Settings;
 use crate::dreams::*;
 
-const RENDER_MEASURE_SIZE: usize = 100;
+const RENDER_MEASURE_SIZE: usize = 200;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Debug)]
 enum ViewportMode {
     Immediate,
     Deferred,
+}
+
+
+struct FPSMeasureData {
+    avg: f32,
+    worst: f32,
+    render_timestamps: Vec<Instant>,
+}
+
+impl std::fmt::Display for FPSMeasureData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Avg: {:.2}, Worst: {:.2}", self.avg, self.worst)
+    }
+}
+
+impl FPSMeasureData {
+    fn new() -> Self {
+        Self {
+            avg: 0.0,
+            worst: 0.0,
+            render_timestamps: Vec::with_capacity(RENDER_MEASURE_SIZE),
+        }
+    }
+
+    fn record_timestamp(&mut self) {
+        self.render_timestamps.push(Instant::now());
+        if self.render_timestamps.len() == RENDER_MEASURE_SIZE {
+            let mut durations: Vec<Duration> = Vec::with_capacity(RENDER_MEASURE_SIZE);
+            for t in self.render_timestamps.windows(2) {
+                durations.push(t[1] - t[0]);
+            }
+            let sum: Duration = durations.iter().sum();
+            let avg = sum.as_secs_f32() / durations.len() as f32;
+            let worst = durations.iter().max().unwrap_or(&Duration::ZERO).as_secs_f32();
+            self.avg = 1.0 / avg;
+            self.worst = 1.0 / worst;
+            self.render_timestamps.clear();
+        }
+    }
 }
 
 pub struct DreamSpinner {
@@ -23,7 +61,7 @@ pub struct DreamSpinner {
     primary_display: DisplayInfo,
     secondary_displays: Vec<DisplayInfo>,
     viewport_mode: ViewportMode,
-    render_durations: VecDeque<Duration>,
+    fps_measurement: FPSMeasureData,
 }
 
 impl DreamSpinner {
@@ -59,7 +97,7 @@ impl DreamSpinner {
             primary_display,
             secondary_displays,
             viewport_mode: ViewportMode::Immediate,
-            render_durations: VecDeque::with_capacity(RENDER_MEASURE_SIZE),
+            fps_measurement: FPSMeasureData::new(),
         }
     }
 }
@@ -67,9 +105,8 @@ impl DreamSpinner {
 impl eframe::App for DreamSpinner {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let timer = std::time::Instant::now();
         let active_dream = self.zoo[1].clone();
-        active_dream.write().unwrap().prepare();
+        //active_dream.write().unwrap().prepare();
         // Get information on all displays
 
         if self.first_frame {
@@ -143,8 +180,7 @@ impl eframe::App for DreamSpinner {
                 }
             }
             // Paint primary window
-            let (avg, worst) = analyze_render_durations(&self.render_durations);
-            ui.label(format!("Average: {:.4}  Worst: {:.4}", avg, worst));
+            ui.label(self.fps_measurement.to_string());
             active_dream.read().unwrap().dream_egui(ui);
             DreamSpinner::set_input(ui);
             match self.viewport_mode {
@@ -153,10 +189,7 @@ impl eframe::App for DreamSpinner {
             }
 
             // Log render time
-            self.render_durations.push_back(timer.elapsed());
-            if self.render_durations.len() > RENDER_MEASURE_SIZE {
-                self.render_durations.pop_front();
-            }
+            self.fps_measurement.record_timestamp();
         });
     }
 }
@@ -191,14 +224,4 @@ fn request_updates(ui: &mut egui::Ui) {
     for id in ids {
         ui.ctx().request_repaint_of(id);
     }
-}
-
-fn analyze_render_durations(dur: &VecDeque<Duration>) -> (f64, f64) {
-    if dur.len() < RENDER_MEASURE_SIZE {
-        return (0.0, 0.0);
-    }
-    let sum: Duration = dur.iter().sum();
-    let avg = sum.as_secs_f64() / dur.len() as f64;
-    let worst = dur.iter().max().unwrap_or(&Duration::ZERO).as_secs_f64();
-    (1.0 / avg, 1.0 / worst)
 }
