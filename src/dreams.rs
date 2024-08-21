@@ -2,6 +2,7 @@ use crate::app_settings::Settings;
 use std::sync::{Arc, RwLock};
 
 mod dendraclock;
+mod monet;
 mod solid_color;
 
 /// For giggles, I call the collection of all dream types "zoo"
@@ -57,6 +58,8 @@ pub fn build_zoo(settings: Settings) -> Zoo {
     let d = RwLock::new(solid_color::SolidColorDream::new(settings.clone()));
     zoo.push(Arc::new(d));
     let d = RwLock::new(dendraclock::DendraClockDream::new(settings.clone()));
+    zoo.push(Arc::new(d));
+    let d = RwLock::new(monet::MonetDream::new(settings.clone()));
     zoo.push(Arc::new(d));
     zoo
 }
