@@ -128,7 +128,6 @@ fn main() -> anyhow::Result<()> {
     match parsed.command {
         MainCommand::Show => {
             let settings_clone = settings.clone();
-            settings_clone.write().unwrap().attempt_multiscreen = true;
             // DreamSpinner supports multiple displays. In OS, there are concepts of
             // a primary display and secondary displays. In eframe, there are primary
             // window and secondary windows. Secondary windows have to be created from

@@ -2,22 +2,45 @@ use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
 use log;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
+    fmt::Display,
     fs::File,
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
 };
 
+use crate::dreams::DreamId;
+
 pub type Settings = Arc<RwLock<SettingsRaw>>;
 
-#[derive(Clone, Default, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 /// Contains all persistant settings of the application
 pub struct SettingsRaw {
-    /// Try to detect and cover additional monitors.
-    pub attempt_multiscreen: bool,
     /// Contains unique settings of particular dreams
     pub dream_settings: HashMap<String, String>,
+
+    /// Try to detect and cover additional monitors.
+    pub attempt_multiscreen: bool,
+
+    /// Show FPS statistics on primary screen.
+    pub show_fps: bool,
+
+    pub selected_dreams: HashSet<DreamId>,
+
+    pub viewport_mode: ViewportMode,
+}
+
+impl Default for SettingsRaw {
+    fn default() -> Self {
+        Self {
+            dream_settings: HashMap::new(),
+            attempt_multiscreen: false,
+            show_fps: false,
+            selected_dreams: HashSet::from(["fractal_clock".to_string()]),
+            viewport_mode: ViewportMode::Immediate,
+        }
+    }
 }
 
 impl SettingsRaw {
@@ -70,5 +93,23 @@ impl SettingsRaw {
         std::fs::create_dir_all(&settings_dir)?;
         File::create(&settings_file)?;
         return Ok(settings_file);
+    }
+}
+
+#[derive(
+    PartialEq, Debug, serde::Deserialize, serde::Serialize, Default, Clone, Copy,
+)]
+pub enum ViewportMode {
+    #[default]
+    Immediate,
+    Deferred,
+}
+
+impl Display for ViewportMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ViewportMode::Immediate => write!(f, "Immediate"),
+            ViewportMode::Deferred => write!(f, "Deferred"),
+        }
     }
 }

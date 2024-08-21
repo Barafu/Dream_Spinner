@@ -1,19 +1,13 @@
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use display_info::DisplayInfo;
+use rand::Rng;
 
-use crate::app_settings::Settings;
+use crate::app_settings::{Settings, ViewportMode};
 use crate::dreams::*;
 
 const RENDER_MEASURE_SIZE: usize = 200;
-
-#[allow(dead_code)]
-#[derive(PartialEq, Debug)]
-enum ViewportMode {
-    Immediate,
-    Deferred,
-}
-
 
 struct FPSMeasureData {
     avg: f32,
@@ -39,13 +33,15 @@ impl FPSMeasureData {
     fn record_timestamp(&mut self) {
         self.render_timestamps.push(Instant::now());
         if self.render_timestamps.len() == RENDER_MEASURE_SIZE {
-            let mut durations: Vec<Duration> = Vec::with_capacity(RENDER_MEASURE_SIZE);
+            let mut durations: Vec<Duration> =
+                Vec::with_capacity(RENDER_MEASURE_SIZE);
             for t in self.render_timestamps.windows(2) {
                 durations.push(t[1] - t[0]);
             }
             let sum: Duration = durations.iter().sum();
             let avg = sum.as_secs_f32() / durations.len() as f32;
-            let worst = durations.iter().max().unwrap_or(&Duration::ZERO).as_secs_f32();
+            let worst =
+                durations.iter().max().unwrap_or(&Duration::ZERO).as_secs_f32();
             self.avg = 1.0 / avg;
             self.worst = 1.0 / worst;
             self.render_timestamps.clear();
@@ -57,7 +53,7 @@ pub struct DreamSpinner {
     first_frame: bool,
     #[allow(dead_code)]
     settings: Settings,
-    zoo: Zoo,
+    dream: Arc<RwLock<dyn Dream>>,
     primary_display: DisplayInfo,
     secondary_displays: Vec<DisplayInfo>,
     viewport_mode: ViewportMode,
@@ -80,7 +76,6 @@ impl DreamSpinner {
             displays.iter().position(|d| d.is_primary).unwrap();
         let primary_display = displays.swap_remove(primary_position);
         displays.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
-        //displays.extend_from_within(..displays.len());
         // List secondary monitors for creating additional windows.
         let secondary_displays =
             match settings.read().unwrap().attempt_multiscreen {
@@ -88,25 +83,36 @@ impl DreamSpinner {
                 false => Vec::new(),
             };
 
-        let zoo = build_zoo(settings.clone());
+        let dream = Self::select_active_dream(settings.clone());
 
         Self {
-            settings,
+            settings: settings.clone(),
             first_frame: true,
-            zoo,
+            dream,
             primary_display,
             secondary_displays,
-            viewport_mode: ViewportMode::Immediate,
+            viewport_mode: settings.read().unwrap().viewport_mode,
             fps_measurement: FPSMeasureData::new(),
         }
+    }
+
+    /// Return Arc with the dream that will be displayed. 
+    /// 
+    /// Chooses randomly one of the dreams in selected list.
+    fn select_active_dream( settings: Settings) -> Arc<RwLock<dyn Dream>> {
+        let zoo = build_zoo(settings.clone());
+        let selected_dreams = &settings.read().unwrap().selected_dreams;
+        let mut rng = rand::thread_rng();
+        let random_index = rng.gen_range(0..selected_dreams.len());
+        let random_id = selected_dreams.iter().nth(random_index).unwrap();
+        let dream = select_dream_by_id(&zoo, random_id).unwrap();
+        dream
     }
 }
 
 impl eframe::App for DreamSpinner {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let active_dream = self.zoo[1].clone();
-        //active_dream.write().unwrap().prepare();
         // Get information on all displays
 
         if self.first_frame {
@@ -136,7 +142,7 @@ impl eframe::App for DreamSpinner {
                     .with_drag_and_drop(false);
                 let viewport_id = egui::ViewportId::from_hash_of(display.id * pos as u32);
 
-                let thread_dream_arc = active_dream.clone();
+                let thread_dream_arc = self.dream.clone();
 
                 match self.viewport_mode {
                     ViewportMode::Immediate => {
@@ -180,16 +186,18 @@ impl eframe::App for DreamSpinner {
                 }
             }
             // Paint primary window
-            ui.label(self.fps_measurement.to_string());
-            active_dream.read().unwrap().dream_egui(ui);
+            if self.settings.read().unwrap().show_fps {
+                // Log render time
+                self.fps_measurement.record_timestamp();
+                ui.label(self.fps_measurement.to_string());
+            }
+            self.dream.read().unwrap().dream_egui(ui);
             DreamSpinner::set_input(ui);
             match self.viewport_mode {
                 ViewportMode::Immediate => ctx.request_repaint(),
                 ViewportMode::Deferred => request_updates(ui),
             }
 
-            // Log render time
-            self.fps_measurement.record_timestamp();
         });
     }
 }

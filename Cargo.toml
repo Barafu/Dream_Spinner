@@ -23,6 +23,7 @@ anyhow = "1.0.86"
 toml = "0.8.19"
 directories = "5.0.1"
 display-info = "0.5.1"
+rand = "0.8.5"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
