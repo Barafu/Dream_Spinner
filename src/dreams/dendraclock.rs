@@ -5,7 +5,6 @@ use std::f32::consts::TAU;
 
 pub struct DendraClockDream {
     dream_settings: DendraClockSettings,
-    app_settings: Settings,
 }
 
 #[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize)]
@@ -35,12 +34,10 @@ impl Default for DendraClockSettings {
 }
 
 impl Dream for DendraClockDream {
-    fn new(settings: Settings) -> Self {
+    fn new() -> Self {
         let local_settings = DendraClockSettings::default();
-        let mut d =
-            Self { dream_settings: local_settings, app_settings: settings };
-        let txt = d
-            .app_settings
+        let mut d = Self { dream_settings: local_settings };
+        let txt = SETTINGS
             .read()
             .unwrap()
             .dream_settings
@@ -79,11 +76,7 @@ impl Dream for DendraClockDream {
 
     fn store(&self) {
         let txt = toml::to_string(&self.dream_settings).unwrap();
-        self.app_settings
-            .write()
-            .unwrap()
-            .dream_settings
-            .insert(self.id(), txt);
+        SETTINGS.write().unwrap().dream_settings.insert(self.id(), txt);
     }
 }
 

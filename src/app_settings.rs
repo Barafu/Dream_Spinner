@@ -6,12 +6,14 @@ use std::{
     fmt::Display,
     fs::File,
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::{LazyLock, RwLock},
 };
 
-use crate::dreams::DreamId;
+pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> = LazyLock::new(|| {
+    RwLock::new(SettingsRaw::read_from_file_default().unwrap())
+});
 
-pub type Settings = Arc<RwLock<SettingsRaw>>;
+use crate::dreams::DreamId;
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(default)]

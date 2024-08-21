@@ -2,10 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use anyhow::{bail, Result};
-use dream_spinner::app_settings::SettingsRaw;
+use dream_spinner::app_settings::SETTINGS;
 use dream_spinner::dreamconfig::DreamConfigApp;
 use dream_spinner::dreamspinner::DreamSpinner;
-use std::sync::{Arc, RwLock};
 
 //Parsing CLI arguments
 
@@ -117,17 +116,12 @@ fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let parsed = parse_args(&args).unwrap();
 
-    // Load settings from file
-    let settings =
-        Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
-
     // Eframe result, for error messages
     let egui_result;
 
     // Display dreams
     match parsed.command {
         MainCommand::Show => {
-            let settings_clone = settings.clone();
             // DreamSpinner supports multiple displays. In OS, there are concepts of
             // a primary display and secondary displays. In eframe, there are primary
             // window and secondary windows. Secondary windows have to be created from
@@ -156,11 +150,9 @@ fn main() -> anyhow::Result<()> {
             egui_result = eframe::run_native(
                 "DreamSpinner",
                 native_options,
-                Box::new(|cc| {
-                    Ok(Box::new(DreamSpinner::new(cc, settings_clone)))
-                }),
+                Box::new(|cc| Ok(Box::new(DreamSpinner::new(cc)))),
             );
-            settings.write().unwrap().write_to_file_default()?;
+            SETTINGS.write().unwrap().write_to_file_default()?;
         }
         MainCommand::Config => {
             // Show the config window

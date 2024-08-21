@@ -1,4 +1,4 @@
-use crate::app_settings::Settings;
+use crate::app_settings::SETTINGS;
 use std::sync::{Arc, RwLock};
 
 mod dendraclock;
@@ -15,7 +15,7 @@ pub enum DreamType {
 }
 pub trait Dream: Sync + Send {
     /// Create the dream using the settings
-    fn new(settings: Settings) -> Self
+    fn new() -> Self
     where
         Self: Sized;
 
@@ -53,13 +53,13 @@ pub trait Dream: Sync + Send {
     fn store(&self) {}
 }
 
-pub fn build_zoo(settings: Settings) -> Zoo {
+pub fn build_zoo() -> Zoo {
     let mut zoo: Zoo = Zoo::new();
-    let d = RwLock::new(solid_color::SolidColorDream::new(settings.clone()));
+    let d = RwLock::new(solid_color::SolidColorDream::new());
     zoo.push(Arc::new(d));
-    let d = RwLock::new(dendraclock::DendraClockDream::new(settings.clone()));
+    let d = RwLock::new(dendraclock::DendraClockDream::new());
     zoo.push(Arc::new(d));
-    let d = RwLock::new(monet::MonetDream::new(settings.clone()));
+    let d = RwLock::new(monet::MonetDream::new());
     zoo.push(Arc::new(d));
     zoo
 }

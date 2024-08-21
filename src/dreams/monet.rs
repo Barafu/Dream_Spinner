@@ -1,25 +1,20 @@
-use crate::app_settings::Settings;
-
-use super::Dream;
+use crate::dreams::*;
 
 pub struct MonetDream {
     dream_settings: MonetSettings,
-    app_settings: Settings,
 }
 
 #[derive(PartialEq, Debug, Default, serde::Deserialize, serde::Serialize)]
 struct MonetSettings {}
 
 impl Dream for MonetDream {
-    fn new(settings: crate::app_settings::Settings) -> Self
+    fn new() -> Self
     where
         Self: Sized,
     {
         let local_settings = MonetSettings::default();
-        let mut d =
-            Self { dream_settings: local_settings, app_settings: settings };
-        let txt = d
-            .app_settings
+        let mut d = Self { dream_settings: local_settings };
+        let txt = SETTINGS
             .read()
             .unwrap()
             .dream_settings

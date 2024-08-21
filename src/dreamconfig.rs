@@ -1,6 +1,4 @@
-use std::sync::{Arc, RwLock};
-
-use crate::app_settings::{Settings, SettingsRaw, ViewportMode};
+use crate::app_settings::{ViewportMode, SETTINGS};
 use crate::dreams::*;
 use anyhow::Result;
 
@@ -14,7 +12,6 @@ enum ActivePanel {
 }
 
 pub struct DreamConfigApp {
-    settings: Settings,
     active_panel: ActivePanel,
     zoo: Zoo,
 }
@@ -82,21 +79,19 @@ impl eframe::App for DreamConfigApp {
 impl DreamConfigApp {
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Result<Self> {
         // Load settings from file
-        let settings =
-            Arc::new(RwLock::new(SettingsRaw::read_from_file_default()?));
-        let zoo = build_zoo(settings.clone());
-        dbg!(settings.read().unwrap().attempt_multiscreen);
+
+        let zoo = build_zoo();
         for dream in zoo.iter() {
             dream.write().unwrap().prepare();
         }
-        Ok(Self { settings, active_panel: ActivePanel::Generic, zoo })
+        Ok(Self { active_panel: ActivePanel::Generic, zoo })
     }
 
     fn save(&mut self) {
         for dream in self.zoo.iter() {
             dream.read().unwrap().store();
         }
-        self.settings.write().unwrap().write_to_file_default().unwrap();
+        SETTINGS.write().unwrap().write_to_file_default().unwrap();
     }
 
     fn cancel(&mut self, ctx: &egui::Context) {
@@ -104,7 +99,7 @@ impl DreamConfigApp {
     }
 
     fn draw_generic(&mut self, ui: &mut egui::Ui) {
-        let settings = &mut self.settings.write().unwrap();
+        let settings = &mut SETTINGS.write().unwrap();
         ui.heading("Dream Spinner");
         ui.separator();
         ui.checkbox(&mut settings.show_fps, "Show FPS")
@@ -137,7 +132,7 @@ impl DreamConfigApp {
         // The list of selected dreams must never be completely empty.
         // So the idea is not to save the change if the user
         // unchecks the last dream.
-        let settings = &mut self.settings.write().unwrap();
+        let settings = &mut SETTINGS.write().unwrap();
 
         let mut ids = Vec::with_capacity(self.zoo.len());
         let mut names = Vec::with_capacity(self.zoo.len());

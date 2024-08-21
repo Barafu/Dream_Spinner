@@ -6,7 +6,6 @@ use crate::dreams::*;
 /// This dream stores color separately from dream_settings, because Color32 is not serializable.
 pub struct SolidColorDream {
     dream_settings: SolidColorSettings,
-    app_settings: Settings,
 }
 
 #[derive(PartialEq, Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -22,13 +21,9 @@ impl Default for SolidColorSettings {
 }
 
 impl Dream for SolidColorDream {
-    fn new(settings: Settings) -> Self {
-        let mut d = Self {
-            dream_settings: SolidColorSettings::default(),
-            app_settings: settings,
-        };
-        let txt = d
-            .app_settings
+    fn new() -> Self {
+        let mut d = Self { dream_settings: SolidColorSettings::default() };
+        let txt = SETTINGS
             .read()
             .unwrap()
             .dream_settings
@@ -71,10 +66,6 @@ impl Dream for SolidColorDream {
 
     fn store(&self) {
         let txt = toml::to_string(&self.dream_settings).unwrap();
-        self.app_settings
-            .write()
-            .unwrap()
-            .dream_settings
-            .insert(self.id(), txt);
+        SETTINGS.write().unwrap().dream_settings.insert(self.id(), txt);
     }
 }
