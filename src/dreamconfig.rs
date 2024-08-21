@@ -20,8 +20,7 @@ pub struct DreamConfigApp {
 }
 
 impl eframe::App for DreamConfigApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {        
-
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.with_layout(
@@ -77,7 +76,6 @@ impl eframe::App for DreamConfigApp {
                 });
             });
         });
-
     }
 }
 
@@ -105,16 +103,16 @@ impl DreamConfigApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 
-fn draw_generic(&mut self, ui: &mut egui::Ui) {
-    let settings = &mut self.settings.write().unwrap();
-    ui.heading("Dream Spinner");
-    ui.separator();
-    ui.checkbox(&mut settings.show_fps, "Show FPS")
-        .on_hover_text("Show FPS of the primary screen");
-    ui.checkbox(&mut settings.attempt_multiscreen, "Detect additional screens")
+    fn draw_generic(&mut self, ui: &mut egui::Ui) {
+        let settings = &mut self.settings.write().unwrap();
+        ui.heading("Dream Spinner");
+        ui.separator();
+        ui.checkbox(&mut settings.show_fps, "Show FPS")
+            .on_hover_text("Show FPS of the primary screen");
+        ui.checkbox(&mut settings.attempt_multiscreen, "Detect additional screens")
         .on_hover_text("Display dream on all screens. If you don't have a second screen, it will be ignored");
-    if settings.attempt_multiscreen {
-        egui::ComboBox::from_label("Presentation mode")
+        if settings.attempt_multiscreen {
+            egui::ComboBox::from_label("Presentation mode")
             .selected_text(format!(
                 "{}",
                 settings.viewport_mode.to_string()
@@ -131,65 +129,62 @@ fn draw_generic(&mut self, ui: &mut egui::Ui) {
                     ViewportMode::Deferred.to_string(),
                 ).on_hover_text("Fill all screens independently. Better FPS, but may cause problems.");
             });
-    }
-}
-
-/// UI panel to select which dreams to run.
-fn draw_dream_select(&mut self, ui: &mut egui::Ui) {
-
-    // The list of selected dreams must never be completely empty. 
-    // So the idea is not to save the change if the user
-    // unchecks the last dream. 
-    let settings = &mut self.settings.write().unwrap();
-
-    let mut ids = Vec::with_capacity(self.zoo.len());
-    let mut names = Vec::with_capacity(self.zoo.len());
-
-    for arcd in self.zoo.iter() {
-        let d = arcd.read().unwrap();
-        ids.push(d.id());
-        names.push(d.name());
+        }
     }
 
-    let _active_dreams: Vec<bool> = Vec::with_capacity(ids.len());
-    assert_eq!(ids.len(), names.len());
+    /// UI panel to select which dreams to run.
+    fn draw_dream_select(&mut self, ui: &mut egui::Ui) {
+        // The list of selected dreams must never be completely empty.
+        // So the idea is not to save the change if the user
+        // unchecks the last dream.
+        let settings = &mut self.settings.write().unwrap();
 
-    ui.label("Select dream:");
-    let st = &mut settings.selected_dreams;
-    for n in 0..ids.len() {
-        let mut active = st.contains(&ids[n]);
-        ui.checkbox(&mut active, &names[n]);
-        if active {
-            st.insert(ids[n].clone());
-        } else {
-            if st.len() > 1 {
-                st.remove(&ids[n]);
+        let mut ids = Vec::with_capacity(self.zoo.len());
+        let mut names = Vec::with_capacity(self.zoo.len());
+
+        for arcd in self.zoo.iter() {
+            let d = arcd.read().unwrap();
+            ids.push(d.id());
+            names.push(d.name());
+        }
+
+        let _active_dreams: Vec<bool> = Vec::with_capacity(ids.len());
+        assert_eq!(ids.len(), names.len());
+
+        ui.label("Select dream:");
+        let st = &mut settings.selected_dreams;
+        for n in 0..ids.len() {
+            let mut active = st.contains(&ids[n]);
+            ui.checkbox(&mut active, &names[n]);
+            if active {
+                st.insert(ids[n].clone());
+            } else {
+                if st.len() > 1 {
+                    st.remove(&ids[n]);
+                }
             }
         }
     }
 
-   
-}
+    fn draw_about(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            ui.heading("Dream Spinner");
+            ui.separator();
+            self.powered_by_egui_and_eframe(ui);
+        });
+    }
 
-fn draw_about(&mut self, ui: &mut egui::Ui) {
-    ui.vertical(|ui| {
-        ui.heading("Dream Spinner");
-        ui.separator();
-        self.powered_by_egui_and_eframe(ui);
-    });
-}
-
-fn powered_by_egui_and_eframe(&mut self, ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
-}
+    fn powered_by_egui_and_eframe(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            ui.label("Powered by ");
+            ui.hyperlink_to("egui", "https://github.com/emilk/egui");
+            ui.label(" and ");
+            ui.hyperlink_to(
+                "eframe",
+                "https://github.com/emilk/egui/tree/master/crates/eframe",
+            );
+            ui.label(".");
+        });
+    }
 }

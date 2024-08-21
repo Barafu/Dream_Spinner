@@ -35,17 +35,28 @@ impl Default for DendraClockSettings {
 }
 
 impl Dream for DendraClockDream {
+    fn new(settings: Settings) -> Self {
+        let local_settings = DendraClockSettings::default();
+        let mut d =
+            Self { dream_settings: local_settings, app_settings: settings };
+        let txt = d
+            .app_settings
+            .read()
+            .unwrap()
+            .dream_settings
+            .get(&d.id())
+            .cloned()
+            .unwrap_or_default();
+        d.dream_settings = toml::from_str(&txt).unwrap_or_default();
+        d
+    }
+
     fn id(&self) -> DreamId {
         "fractal_clock".to_string()
     }
 
     fn name(&self) -> String {
         "Fractal Clock".to_string()
-    }
-
-    fn new(settings: Settings) -> Self {
-        let local_settings = DendraClockSettings::default();
-        Self { dream_settings: local_settings, app_settings: settings }
     }
 
     fn get_type(&self) -> DreamType {
@@ -60,17 +71,7 @@ impl Dream for DendraClockDream {
         self.options_ui(ui);
     }
 
-    fn prepare(&mut self) {
-        let txt = self
-            .app_settings
-            .read()
-            .unwrap()
-            .dream_settings
-            .get(&self.id())
-            .cloned()
-            .unwrap_or_default();
-        self.dream_settings = toml::from_str(&txt).unwrap_or_default();
-    }
+    fn prepare(&mut self) {}
 
     fn needs_loading(&self) -> bool {
         false

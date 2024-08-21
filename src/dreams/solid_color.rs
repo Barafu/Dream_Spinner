@@ -2,31 +2,41 @@ use crate::dreams::*;
 
 /// This dream is intended to be as primitive as possible to serve as example
 /// of how to implement Dream trait.
+///
+/// This dream stores color separately from dream_settings, because Color32 is not serializable.
 pub struct SolidColorDream {
-    stored_settings: SolidColorSettings,
+    dream_settings: SolidColorSettings,
     app_settings: Settings,
-    color: egui::Color32,
 }
 
 #[derive(PartialEq, Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 struct SolidColorSettings {
-    color_hex: String, // Stored as hex, because Color32 is not serializable
+    color: egui::Color32, // Stored as hex, because Color32 is not serializable
 }
 
 impl Default for SolidColorSettings {
     fn default() -> Self {
-        Self { color_hex: "#635147".to_string() }
+        Self { color: egui::Color32::from_hex("#635147").unwrap() }
     }
 }
 
 impl Dream for SolidColorDream {
     fn new(settings: Settings) -> Self {
-        Self {
-            stored_settings: SolidColorSettings::default(),
+        let mut d = Self {
+            dream_settings: SolidColorSettings::default(),
             app_settings: settings,
-            color: egui::Color32::BLACK,
-        }
+        };
+        let txt = d
+            .app_settings
+            .read()
+            .unwrap()
+            .dream_settings
+            .get(&d.id())
+            .cloned()
+            .unwrap_or_default();
+        d.dream_settings = toml::from_str(&txt).unwrap_or_default();
+        d
     }
     fn id(&self) -> DreamId {
         "solid_color".to_string()
@@ -46,31 +56,21 @@ impl Dream for SolidColorDream {
             ui.layer_id(),
             ui.available_rect_before_wrap(),
         );
-        painter.rect_filled(ui.available_rect_before_wrap(), 0.0, self.color);
+        painter.rect_filled(
+            ui.available_rect_before_wrap(),
+            0.0,
+            self.dream_settings.color,
+        );
     }
 
     fn config_egui(&mut self, ui: &mut egui::Ui) {
-        ui.color_edit_button_srgba(&mut self.color);
+        ui.color_edit_button_srgba(&mut self.dream_settings.color);
     }
 
-    fn prepare(&mut self) {
-        let txt = self
-            .app_settings
-            .read()
-            .unwrap()
-            .dream_settings
-            .get(&self.id())
-            .cloned()
-            .unwrap_or_default();
-        self.stored_settings = toml::from_str(&txt).unwrap_or_default();
-        self.color = egui::Color32::from_hex(&self.stored_settings.color_hex)
-            .unwrap_or_default();
-    }
+    fn prepare(&mut self) {}
 
     fn store(&self) {
-        let mut s = self.stored_settings.clone();
-        s.color_hex = self.color.to_hex();
-        let txt = toml::to_string(&s).unwrap();
+        let txt = toml::to_string(&self.dream_settings).unwrap();
         self.app_settings
             .write()
             .unwrap()

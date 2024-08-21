@@ -96,16 +96,17 @@ impl DreamSpinner {
         }
     }
 
-    /// Return Arc with the dream that will be displayed. 
-    /// 
-    /// Chooses randomly one of the dreams in selected list.
-    fn select_active_dream( settings: Settings) -> Arc<RwLock<dyn Dream>> {
+    /// Return Arc with the dream that will be displayed.
+    ///
+    /// Chooses randomly one of the dreams in selected list. Runs prepare on it.
+    fn select_active_dream(settings: Settings) -> Arc<RwLock<dyn Dream>> {
         let zoo = build_zoo(settings.clone());
         let selected_dreams = &settings.read().unwrap().selected_dreams;
         let mut rng = rand::thread_rng();
         let random_index = rng.gen_range(0..selected_dreams.len());
         let random_id = selected_dreams.iter().nth(random_index).unwrap();
         let dream = select_dream_by_id(&zoo, random_id).unwrap();
+        dream.write().unwrap().prepare();
         dream
     }
 }
