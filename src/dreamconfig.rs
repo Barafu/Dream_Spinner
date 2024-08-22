@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::app_settings::{ViewportMode, SETTINGS};
 use crate::dreams::*;
 use anyhow::Result;
@@ -13,7 +15,7 @@ enum ActivePanel {
 
 pub struct DreamConfigApp {
     active_panel: ActivePanel,
-    zoo: Zoo,
+    zoo: BTreeMap<String, ADream>,
 }
 
 impl eframe::App for DreamConfigApp {
@@ -53,7 +55,7 @@ impl eframe::App for DreamConfigApp {
                     );
                     //ui.separator();
                     // TODO: Can't enable separator: breaks UI for some reason
-                    for dream in self.zoo.iter() {
+                    for dream in self.zoo.values() {
                         ui.selectable_value(
                             &mut self.active_panel,
                             ActivePanel::Dream(dream.read().unwrap().id()),
@@ -67,8 +69,7 @@ impl eframe::App for DreamConfigApp {
                     ActivePanel::Select => self.draw_dream_select(ui),
                     ActivePanel::About => self.draw_about(ui),
                     ActivePanel::Dream(id) => {
-                        let dream = select_dream_by_id(&self.zoo, id).unwrap();
-                        dream.write().unwrap().config_egui(ui);
+                        self.zoo[*id].write().unwrap().config_egui(ui);
                     }
                 });
             });
@@ -80,15 +81,16 @@ impl DreamConfigApp {
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Result<Self> {
         // Load settings from file
 
-        let zoo = build_zoo();
-        for dream in zoo.iter() {
-            dream.write().unwrap().prepare();
-        }
+        let dream_ids = build_dreams_id_list();
+        let zoo: BTreeMap<String, ADream> = dream_ids
+            .keys()
+            .map(|id| (id.to_string(), build_dream_by_id(id)))
+            .collect();
         Ok(Self { active_panel: ActivePanel::Generic, zoo })
     }
 
     fn save(&mut self) {
-        for dream in self.zoo.iter() {
+        for dream in self.zoo.values() {
             dream.read().unwrap().store();
         }
         SETTINGS.write().unwrap().write_to_file_default().unwrap();
@@ -137,7 +139,7 @@ impl DreamConfigApp {
         let mut ids = Vec::with_capacity(self.zoo.len());
         let mut names = Vec::with_capacity(self.zoo.len());
 
-        for arcd in self.zoo.iter() {
+        for arcd in self.zoo.values() {
             let d = arcd.read().unwrap();
             ids.push(d.id());
             names.push(d.name());
@@ -149,13 +151,13 @@ impl DreamConfigApp {
         ui.label("Select dream:");
         let st = &mut settings.selected_dreams;
         for n in 0..ids.len() {
-            let mut active = st.contains(&ids[n]);
-            ui.checkbox(&mut active, &names[n]);
+            let mut active = st.contains(ids[n]);
+            ui.checkbox(&mut active, names[n]);
             if active {
-                st.insert(ids[n].clone());
+                st.insert(ids[n].to_string());
             } else {
                 if st.len() > 1 {
-                    st.remove(&ids[n]);
+                    st.remove(ids[n]);
                 }
             }
         }

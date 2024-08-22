@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
 use log;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt::Display,
     fs::File,
     path::{Path, PathBuf},
@@ -13,14 +13,12 @@ pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> = LazyLock::new(|| {
     RwLock::new(SettingsRaw::read_from_file_default().unwrap())
 });
 
-use crate::dreams::DreamId;
-
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 /// Contains all persistant settings of the application
 pub struct SettingsRaw {
     /// Contains unique settings of particular dreams
-    pub dream_settings: HashMap<String, String>,
+    pub dream_settings: BTreeMap<String, String>,
 
     /// Try to detect and cover additional monitors.
     pub attempt_multiscreen: bool,
@@ -28,7 +26,7 @@ pub struct SettingsRaw {
     /// Show FPS statistics on primary screen.
     pub show_fps: bool,
 
-    pub selected_dreams: HashSet<DreamId>,
+    pub selected_dreams: BTreeSet<String>,
 
     pub viewport_mode: ViewportMode,
 }
@@ -36,10 +34,10 @@ pub struct SettingsRaw {
 impl Default for SettingsRaw {
     fn default() -> Self {
         Self {
-            dream_settings: HashMap::new(),
+            dream_settings: BTreeMap::new(),
             attempt_multiscreen: false,
             show_fps: false,
-            selected_dreams: HashSet::from(["fractal_clock".to_string()]),
+            selected_dreams: BTreeSet::from(["fractal_clock".to_string()]),
             viewport_mode: ViewportMode::Immediate,
         }
     }

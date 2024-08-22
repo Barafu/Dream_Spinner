@@ -1,13 +1,15 @@
 use crate::app_settings::SETTINGS;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, RwLock},
+};
 
 mod dendraclock;
 mod monet;
 mod solid_color;
 
-/// For giggles, I call the collection of all dream types "zoo"
-pub type Zoo = Vec<Arc<RwLock<dyn Dream>>>;
-pub type DreamId = String;
+pub type DreamId = &'static str;
+pub type ADream = Arc<RwLock<dyn Dream>>;
 
 #[derive(PartialEq, Debug)]
 pub enum DreamType {
@@ -26,7 +28,7 @@ pub trait Dream: Sync + Send {
 
     /// Gives the name to display in UI. The name also serves as ID, including
     /// in settings, so it must be unique
-    fn name(&self) -> String;
+    fn name(&self) -> &'static str;
 
     /// Prepare dream for rendering (load resources, initialize RNG etc.)    
     fn prepare(&mut self) {}
@@ -53,21 +55,24 @@ pub trait Dream: Sync + Send {
     fn store(&self) {}
 }
 
-pub fn build_zoo() -> Zoo {
-    let mut zoo: Zoo = Zoo::new();
-    let d = RwLock::new(solid_color::SolidColorDream::new());
-    zoo.push(Arc::new(d));
-    let d = RwLock::new(dendraclock::DendraClockDream::new());
-    zoo.push(Arc::new(d));
-    let d = RwLock::new(monet::MonetDream::new());
-    zoo.push(Arc::new(d));
+pub fn build_dreams_id_list() -> BTreeMap<&'static str, &'static str> {
+    let mut zoo = BTreeMap::new();
+    zoo.insert(dendraclock::DREAM_ID, dendraclock::DREAM_NAME);
+    zoo.insert(monet::DREAM_ID, monet::DREAM_NAME);
+    zoo.insert(solid_color::DREAM_ID, solid_color::DREAM_NAME);
     zoo
 }
 
 // Pick a dream from zoo by its id.
-pub fn select_dream_by_id(
-    zoo: &Zoo,
-    id: &DreamId,
-) -> Option<Arc<RwLock<dyn Dream>>> {
-    zoo.iter().find(|d| d.read().unwrap().id() == *id).map(|d| d.clone())
+pub fn build_dream_by_id(id: &str) -> ADream {
+    match id {
+        dendraclock::DREAM_ID => {
+            Arc::new(RwLock::new(dendraclock::DendraClockDream::new()))
+        }
+        monet::DREAM_ID => Arc::new(RwLock::new(monet::MonetDream::new())),
+        solid_color::DREAM_ID => {
+            Arc::new(RwLock::new(solid_color::SolidColorDream::new()))
+        }
+        _ => panic!("Unknown dream id: {}", id),
+    }
 }

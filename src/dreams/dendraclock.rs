@@ -3,6 +3,9 @@ use chrono::{Local, Timelike};
 use egui::{widgets::*, *};
 use std::f32::consts::TAU;
 
+pub const DREAM_ID: DreamId = "fractal_clock";
+pub const DREAM_NAME: &'static str = "Fractal Clock";
+
 pub struct DendraClockDream {
     dream_settings: DendraClockSettings,
 }
@@ -41,7 +44,7 @@ impl Dream for DendraClockDream {
             .read()
             .unwrap()
             .dream_settings
-            .get(&d.id())
+            .get(DREAM_ID)
             .cloned()
             .unwrap_or_default();
         d.dream_settings = toml::from_str(&txt).unwrap_or_default();
@@ -49,11 +52,11 @@ impl Dream for DendraClockDream {
     }
 
     fn id(&self) -> DreamId {
-        "fractal_clock".to_string()
+        DREAM_ID
     }
 
-    fn name(&self) -> String {
-        "Fractal Clock".to_string()
+    fn name(&self) -> &'static str {
+        DREAM_NAME
     }
 
     fn get_type(&self) -> DreamType {
@@ -76,7 +79,11 @@ impl Dream for DendraClockDream {
 
     fn store(&self) {
         let txt = toml::to_string(&self.dream_settings).unwrap();
-        SETTINGS.write().unwrap().dream_settings.insert(self.id(), txt);
+        SETTINGS
+            .write()
+            .unwrap()
+            .dream_settings
+            .insert(DREAM_ID.to_string(), txt);
     }
 }
 

@@ -1,5 +1,8 @@
 use crate::dreams::*;
 
+pub const DREAM_ID: DreamId = "solid_color";
+pub const DREAM_NAME: &'static str = "Solid Color";
+
 /// This dream is intended to be as primitive as possible to serve as example
 /// of how to implement Dream trait.
 ///
@@ -27,18 +30,18 @@ impl Dream for SolidColorDream {
             .read()
             .unwrap()
             .dream_settings
-            .get(&d.id())
+            .get(DREAM_ID)
             .cloned()
             .unwrap_or_default();
         d.dream_settings = toml::from_str(&txt).unwrap_or_default();
         d
     }
     fn id(&self) -> DreamId {
-        "solid_color".to_string()
+        DREAM_ID
     }
 
-    fn name(&self) -> String {
-        "Solid Color".to_string()
+    fn name(&self) -> &'static str {
+        DREAM_NAME
     }
 
     fn get_type(&self) -> DreamType {
@@ -66,6 +69,10 @@ impl Dream for SolidColorDream {
 
     fn store(&self) {
         let txt = toml::to_string(&self.dream_settings).unwrap();
-        SETTINGS.write().unwrap().dream_settings.insert(self.id(), txt);
+        SETTINGS
+            .write()
+            .unwrap()
+            .dream_settings
+            .insert(DREAM_ID.to_string(), txt);
     }
 }

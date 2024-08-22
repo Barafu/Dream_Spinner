@@ -1,5 +1,8 @@
 use crate::dreams::*;
 
+pub const DREAM_ID: DreamId = "monet";
+pub const DREAM_NAME: &'static str = "Monet";
+
 pub struct MonetDream {
     dream_settings: MonetSettings,
 }
@@ -18,7 +21,7 @@ impl Dream for MonetDream {
             .read()
             .unwrap()
             .dream_settings
-            .get(&d.id())
+            .get(DREAM_ID)
             .cloned()
             .unwrap_or_default();
         d.dream_settings = toml::from_str(&txt).unwrap_or_default();
@@ -26,11 +29,11 @@ impl Dream for MonetDream {
     }
 
     fn id(&self) -> super::DreamId {
-        "monet".to_string()
+        DREAM_ID
     }
 
-    fn name(&self) -> String {
-        "Monet".to_string()
+    fn name(&self) -> &'static str {
+        DREAM_NAME
     }
 
     fn get_type(&self) -> super::DreamType {
