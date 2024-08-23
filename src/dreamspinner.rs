@@ -24,8 +24,8 @@ impl std::fmt::Display for FPSMeasureData {
 impl FPSMeasureData {
     fn new() -> Self {
         Self {
-            avg: 0.0,
-            worst: 0.0,
+            avg: -1.0,
+            worst: -1.0,
             render_timestamps: Vec::with_capacity(RENDER_MEASURE_SIZE),
         }
     }
@@ -38,7 +38,10 @@ impl FPSMeasureData {
             for t in self.render_timestamps.windows(2) {
                 durations.push(t[1] - t[0]);
             }
-            let sum: Duration = durations.iter().sum();
+            let sum: Duration =
+                self.render_timestamps.last().unwrap().duration_since(
+                    self.render_timestamps.first().cloned().unwrap(),
+                );
             let avg = sum.as_secs_f32() / durations.len() as f32;
             let worst =
                 durations.iter().max().unwrap_or(&Duration::ZERO).as_secs_f32();
@@ -115,6 +118,8 @@ impl eframe::App for DreamSpinner {
         if self.first_frame {
             self.first_frame = false;
 
+            // These viewport settings need to be set after the primary viewport
+            // has been created. Otherwise have DPI problems on Windows.
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(
                 [
                     self.primary_display.x as f32

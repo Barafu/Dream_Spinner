@@ -136,28 +136,16 @@ impl DreamConfigApp {
         // unchecks the last dream.
         let settings = &mut SETTINGS.write().unwrap();
 
-        let mut ids = Vec::with_capacity(self.zoo.len());
-        let mut names = Vec::with_capacity(self.zoo.len());
-
-        for arcd in self.zoo.values() {
-            let d = arcd.read().unwrap();
-            ids.push(d.id());
-            names.push(d.name());
-        }
-
-        let _active_dreams: Vec<bool> = Vec::with_capacity(ids.len());
-        assert_eq!(ids.len(), names.len());
-
         ui.label("Select dream:");
         let st = &mut settings.selected_dreams;
-        for n in 0..ids.len() {
-            let mut active = st.contains(ids[n]);
-            ui.checkbox(&mut active, names[n]);
+        for (id, dream) in self.zoo.iter() {
+            let mut active = st.contains(id);
+            ui.checkbox(&mut active, dream.read().unwrap().name());
             if active {
-                st.insert(ids[n].to_string());
+                st.insert(id.to_string());
             } else {
                 if st.len() > 1 {
-                    st.remove(ids[n]);
+                    st.remove(id);
                 }
             }
         }
