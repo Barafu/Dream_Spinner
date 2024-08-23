@@ -7,7 +7,7 @@ use rand::Rng;
 use crate::app_settings::{ViewportMode, SETTINGS};
 use crate::dreams::*;
 
-const RENDER_MEASURE_SIZE: usize = 10;
+const FPS_MEASURE_UPDATE_SECONDS: f32 = 2.0;
 
 struct FPSMeasureData {
     avg: f32,
@@ -23,26 +23,25 @@ impl std::fmt::Display for FPSMeasureData {
 
 impl FPSMeasureData {
     fn new() -> Self {
-        Self {
-            avg: -1.0,
-            worst: -1.0,
-            render_timestamps: Vec::with_capacity(RENDER_MEASURE_SIZE),
-        }
+        Self { avg: -1.0, worst: -1.0, render_timestamps: Vec::new() }
     }
 
     fn record_timestamp(&mut self) {
         self.render_timestamps.push(Instant::now());
-        if self.render_timestamps.len() == RENDER_MEASURE_SIZE {
+        let sum = self
+            .render_timestamps
+            .last()
+            .unwrap()
+            .duration_since(self.render_timestamps.first().cloned().unwrap())
+            .as_secs_f32();
+        if sum > FPS_MEASURE_UPDATE_SECONDS {
             let mut durations: Vec<Duration> =
-                Vec::with_capacity(RENDER_MEASURE_SIZE);
+                Vec::with_capacity(self.render_timestamps.len() - 1);
             for t in self.render_timestamps.windows(2) {
                 durations.push(t[1] - t[0]);
             }
-            let sum: Duration =
-                self.render_timestamps.last().unwrap().duration_since(
-                    self.render_timestamps.first().cloned().unwrap(),
-                );
-            let avg = sum.as_secs_f32() / durations.len() as f32;
+
+            let avg = sum / durations.len() as f32;
             let worst =
                 durations.iter().max().unwrap_or(&Duration::ZERO).as_secs_f32();
             self.avg = 1.0 / avg;
