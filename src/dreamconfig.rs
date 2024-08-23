@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::app_settings::{ViewportMode, SETTINGS};
+use crate::app_settings::{SettingsRaw, ViewportMode, SETTINGS};
 use crate::dreams::*;
 use anyhow::Result;
 
@@ -16,6 +16,7 @@ enum ActivePanel {
 pub struct DreamConfigApp {
     active_panel: ActivePanel,
     zoo: BTreeMap<String, ADream>,
+    saved_settings: SettingsRaw,
 }
 
 impl eframe::App for DreamConfigApp {
@@ -28,7 +29,15 @@ impl eframe::App for DreamConfigApp {
                         if ui.button("Close").clicked() {
                             self.cancel(ctx);
                         };
-                        if ui.button("Save").clicked() {
+                        let have_changes =
+                            SETTINGS.read().unwrap().ne(&self.saved_settings);
+                        if ui
+                            .add_enabled(
+                                have_changes,
+                                egui::Button::new("Save"),
+                            )
+                            .clicked()
+                        {
                             self.save();
                         };
                     },
@@ -69,11 +78,16 @@ impl eframe::App for DreamConfigApp {
                     ActivePanel::Select => self.draw_dream_select(ui),
                     ActivePanel::About => self.draw_about(ui),
                     ActivePanel::Dream(id) => {
-                        self.zoo[*id].write().unwrap().config_egui(ui);
+                        let mut dr = self.zoo[*id].write().unwrap();
+                        dr.config_egui(ui);
+                        dr.store();
                     }
                 });
             });
         });
+        for dream in self.zoo.values() {
+            dream.read().unwrap().store();
+        }
     }
 }
 
@@ -86,14 +100,13 @@ impl DreamConfigApp {
             .keys()
             .map(|id| (id.to_string(), build_dream_by_id(id)))
             .collect();
-        Ok(Self { active_panel: ActivePanel::Generic, zoo })
+        let saved_settings = SETTINGS.read().unwrap().clone();
+        Ok(Self { active_panel: ActivePanel::Generic, zoo, saved_settings })
     }
 
     fn save(&mut self) {
-        for dream in self.zoo.values() {
-            dream.read().unwrap().store();
-        }
         SETTINGS.write().unwrap().write_to_file_default().unwrap();
+        self.saved_settings = SETTINGS.read().unwrap().clone();
     }
 
     fn cancel(&mut self, ctx: &egui::Context) {

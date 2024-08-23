@@ -13,7 +13,7 @@ pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> = LazyLock::new(|| {
     RwLock::new(SettingsRaw::read_from_file_default().unwrap())
 });
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq)]
 #[serde(default)]
 /// Contains all persistant settings of the application
 pub struct SettingsRaw {
