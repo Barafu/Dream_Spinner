@@ -63,6 +63,10 @@ impl Dream for DendraClockDream {
         return DreamType::Egui;
     }
 
+    fn preferred_update_rate(&self) -> DreamUpdateRate {
+        DreamUpdateRate::Smooth
+    }
+
     fn dream_egui(&self, ui: &mut egui::Ui) {
         self.paint_ui(ui);
     }

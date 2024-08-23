@@ -48,6 +48,10 @@ impl Dream for SolidColorDream {
         return DreamType::Egui;
     }
 
+    fn preferred_update_rate(&self) -> DreamUpdateRate {
+        DreamUpdateRate::Fixed(5.0)
+    }
+
     fn dream_egui(&self, ui: &mut egui::Ui) {
         let painter = egui::Painter::new(
             ui.ctx().clone(),

@@ -109,7 +109,7 @@ impl DreamConfigApp {
         ui.checkbox(&mut settings.attempt_multiscreen, "Detect additional screens")
         .on_hover_text("Display dream on all screens. If you don't have a second screen, it will be ignored");
         if settings.attempt_multiscreen {
-            egui::ComboBox::from_label("Presentation mode")
+            egui::ComboBox::from_label("Multidisplay mode")
             .selected_text(format!(
                 "{}",
                 settings.viewport_mode.to_string()

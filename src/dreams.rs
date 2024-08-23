@@ -15,6 +15,14 @@ pub type ADream = Arc<RwLock<dyn Dream>>;
 pub enum DreamType {
     Egui,
 }
+
+// Shows how often a dream is intended to redraw its image. Smooth means match
+// the FPS of the monitor. Fixed means delay in seconds.
+pub enum DreamUpdateRate {
+    Smooth,
+    Fixed(f32),
+}
+
 pub trait Dream: Sync + Send {
     /// Create the dream using the settings
     fn new() -> Self
@@ -37,6 +45,11 @@ pub trait Dream: Sync + Send {
     fn needs_loading(&self) -> bool {
         false
     }
+
+    /// Returns the update rate of the dream. It shows how often a dream is intended to
+    /// update, but actual updates may be required more frequently. May change
+    /// dynamically.
+    fn preferred_update_rate(&self) -> DreamUpdateRate;
 
     /// Dream type determines what kind of window to perpare for it.
     fn get_type(&self) -> DreamType;

@@ -7,7 +7,7 @@ use rand::Rng;
 use crate::app_settings::{ViewportMode, SETTINGS};
 use crate::dreams::*;
 
-const RENDER_MEASURE_SIZE: usize = 200;
+const RENDER_MEASURE_SIZE: usize = 10;
 
 struct FPSMeasureData {
     avg: f32,
@@ -180,7 +180,7 @@ impl eframe::App for DreamSpinner {
                                     let painter = thread_dream_arc.read().unwrap();
                                     painter.dream_egui(ui);
                                     DreamSpinner::set_input(ui);
-                                    request_updates(ui);
+                                    request_updates(ui, false, thread_dream_arc.read().unwrap().preferred_update_rate());
                                 });
                             },
                         );
@@ -195,10 +195,7 @@ impl eframe::App for DreamSpinner {
             }
             self.dream.read().unwrap().dream_egui(ui);
             DreamSpinner::set_input(ui);
-            match SETTINGS.read().unwrap().viewport_mode {
-                ViewportMode::Immediate => ctx.request_repaint(),
-                ViewportMode::Deferred => request_updates(ui),
-            }
+            request_updates(ui, true, self.dream.read().unwrap().preferred_update_rate());
         });
     }
 }
@@ -225,12 +222,22 @@ impl DreamSpinner {
 }
 
 // Detects all viewports and requests updates to all of them
-fn request_updates(ui: &mut egui::Ui) {
-    let mut ids: Vec<egui::ViewportId> = Vec::new();
-    ui.ctx().input(|i| {
-        ids = i.raw.viewports.keys().cloned().collect();
-    });
-    for id in ids {
-        ui.ctx().request_repaint_of(id);
+fn request_updates(
+    ui: &mut egui::Ui,
+    is_primary_viewport: bool,
+    update_rate: DreamUpdateRate,
+) {
+    if SETTINGS.read().unwrap().viewport_mode == ViewportMode::Immediate
+        && !is_primary_viewport
+    {
+        // Should not update secondary viewports in immediate mode.
+        return;
+    }
+
+    match update_rate {
+        DreamUpdateRate::Smooth => ui.ctx().request_repaint(),
+        DreamUpdateRate::Fixed(n) => ui
+            .ctx()
+            .request_repaint_after(std::time::Duration::from_secs_f32(n)),
     }
 }
