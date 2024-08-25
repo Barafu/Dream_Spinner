@@ -13,14 +13,20 @@ enum ActivePanel {
     Dream(DreamId), // Settings of a dream with given ID
 }
 
+/// The EGUI App object that provides selecting and configuring the dreams.
 pub struct DreamConfigApp {
+    /// What tab is selected currently.
     active_panel: ActivePanel,
+    /// A list of all dreams, to call their settings functions from.
     zoo: BTreeMap<String, ADream>,
+    /// The state of the settings as they were saved last.
+    /// If current state differs from that, the save button will be enabled.
     saved_settings: SettingsRaw,
 }
 
 impl eframe::App for DreamConfigApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // The status bar
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.with_layout(
@@ -44,6 +50,7 @@ impl eframe::App for DreamConfigApp {
                 );
             });
         });
+        // The main contents: a list of tabs on the left and a panel on the right
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
@@ -85,9 +92,6 @@ impl eframe::App for DreamConfigApp {
                 });
             });
         });
-        for dream in self.zoo.values() {
-            dream.read().unwrap().store();
-        }
     }
 }
 
@@ -113,6 +117,7 @@ impl DreamConfigApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 
+    /// Generic settings panel UI
     fn draw_generic(&mut self, ui: &mut egui::Ui) {
         let settings = &mut SETTINGS.write().unwrap();
         ui.heading("Dream Spinner");
@@ -139,13 +144,14 @@ impl DreamConfigApp {
                     ViewportMode::Deferred.to_string(),
                 ).on_hover_text("Fill all screens independently. Better FPS, but may cause problems.");
             });
+            ui.label("Has no effect if there is only 1 screen");
         }
     }
 
     /// UI panel to select which dreams to run.
     fn draw_dream_select(&mut self, ui: &mut egui::Ui) {
         // The list of selected dreams must never be completely empty.
-        // So the idea is not to save the change if the user
+        // So the solution is not to save the change if the user
         // unchecks the last dream.
         let settings = &mut SETTINGS.write().unwrap();
 
@@ -168,21 +174,17 @@ impl DreamConfigApp {
         ui.vertical(|ui| {
             ui.heading("Dream Spinner");
             ui.separator();
-            self.powered_by_egui_and_eframe(ui);
-        });
-    }
-
-    fn powered_by_egui_and_eframe(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 0.0;
-            ui.label("Powered by ");
-            ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-            ui.label(" and ");
-            ui.hyperlink_to(
-                "eframe",
-                "https://github.com/emilk/egui/tree/master/crates/eframe",
-            );
-            ui.label(".");
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                ui.label("Powered by ");
+                ui.hyperlink_to("egui", "https://github.com/emilk/egui");
+                ui.label(" and ");
+                ui.hyperlink_to(
+                    "eframe",
+                    "https://github.com/emilk/egui/tree/master/crates/eframe",
+                );
+                ui.label(".");
+            });
         });
     }
 }

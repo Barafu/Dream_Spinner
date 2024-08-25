@@ -36,15 +36,13 @@ impl Dream for MonetDream {
         DREAM_NAME
     }
 
-    fn get_type(&self) -> super::DreamType {
-        return super::DreamType::Egui;
-    }
-
     fn preferred_update_rate(&self) -> super::DreamUpdateRate {
         super::DreamUpdateRate::Fixed(0.5)
     }
 
-    fn dream_egui(&self, _ui: &mut egui::Ui) {}
+    fn dream_egui(&self, _ui: &mut egui::Ui) {
+        unimplemented!()
+    }
 
     fn config_egui(&mut self, _ui: &mut egui::Ui) {}
 }

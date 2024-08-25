@@ -6,7 +6,6 @@ pub const DREAM_NAME: &'static str = "Solid Color";
 /// This dream is intended to be as primitive as possible to serve as example
 /// of how to implement Dream trait.
 ///
-/// This dream stores color separately from dream_settings, because Color32 is not serializable.
 pub struct SolidColorDream {
     dream_settings: SolidColorSettings,
 }
@@ -14,7 +13,7 @@ pub struct SolidColorDream {
 #[derive(PartialEq, Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 struct SolidColorSettings {
-    color: egui::Color32, // Stored as hex, because Color32 is not serializable
+    color: egui::Color32, // The color of the background
 }
 
 impl Default for SolidColorSettings {
@@ -44,20 +43,19 @@ impl Dream for SolidColorDream {
         DREAM_NAME
     }
 
-    fn get_type(&self) -> DreamType {
-        return DreamType::Egui;
-    }
-
     fn preferred_update_rate(&self) -> DreamUpdateRate {
         DreamUpdateRate::Fixed(5.0)
     }
 
     fn dream_egui(&self, ui: &mut egui::Ui) {
+        // This is how to create a painter that covers the whole screen.
+        // Most dreams should use that.
         let painter = egui::Painter::new(
             ui.ctx().clone(),
             ui.layer_id(),
             ui.available_rect_before_wrap(),
         );
+        // Just fill the whole painter with color.
         painter.rect_filled(
             ui.available_rect_before_wrap(),
             0.0,
@@ -66,10 +64,11 @@ impl Dream for SolidColorDream {
     }
 
     fn config_egui(&mut self, ui: &mut egui::Ui) {
-        ui.color_edit_button_srgba(&mut self.dream_settings.color);
+        ui.horizontal(|ui| {
+            ui.label("Color: ");
+            ui.color_edit_button_srgba(&mut self.dream_settings.color);
+        });
     }
-
-    fn prepare(&mut self) {}
 
     fn store(&self) {
         let txt = toml::to_string(&self.dream_settings).unwrap();

@@ -9,6 +9,7 @@ use std::{
     sync::{LazyLock, RwLock},
 };
 
+/// The one and only global settings object. Don't lock it for long.
 pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> = LazyLock::new(|| {
     RwLock::new(SettingsRaw::read_from_file_default().unwrap())
 });
@@ -26,8 +27,12 @@ pub struct SettingsRaw {
     /// Show FPS statistics on primary screen.
     pub show_fps: bool,
 
+    /// The dreams user selected to display.
     pub selected_dreams: BTreeSet<String>,
 
+    /// Viewport mode, which is what viewport creation function of eframe
+    /// to use when creating secondary displays.
+    /// Has no meaning when there is only 1 display.
     pub viewport_mode: ViewportMode,
 }
 
@@ -44,12 +49,14 @@ impl Default for SettingsRaw {
 }
 
 impl SettingsRaw {
+    /// Read settings from default file location.
     pub fn read_from_file_default() -> Result<Self> {
         let path = Self::determine_settings_path()?;
         log::info!("Reading settings from {}", path.display());
         Self::read_from_file(&path)
     }
 
+    /// Write settings to default file location.
     pub fn write_to_file_default(&self) -> Result<()> {
         let path = Self::determine_settings_path()?;
         log::info!("Writing settings to {}", path.display());
@@ -68,7 +75,7 @@ impl SettingsRaw {
         Ok(())
     }
 
-    /// Finds the path to the settrings file. First tries if dream_settings.toml
+    /// Finds the path to the settings file. First tries if dream_settings.toml
     /// exists in the same directory as the executable. If not, tries if it exists
     /// in the user's settings directory. If not, creates it in the user
     ///  settings directory. If creation fails, returns error.

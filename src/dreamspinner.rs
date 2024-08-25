@@ -7,8 +7,10 @@ use rand::Rng;
 use crate::app_settings::{ViewportMode, SETTINGS};
 use crate::dreams::*;
 
+/// Update FPS measurements every given time in seconds
 const FPS_MEASURE_UPDATE_SECONDS: f32 = 2.0;
 
+/// Makes FPS measurements by accepting a timestamp once every frame.
 struct FPSMeasureData {
     avg: f32,
     worst: f32,
@@ -25,7 +27,7 @@ impl FPSMeasureData {
     fn new() -> Self {
         Self { avg: -1.0, worst: -1.0, render_timestamps: Vec::new() }
     }
-
+    /// Call this once per frame
     fn record_timestamp(&mut self) {
         self.render_timestamps.push(Instant::now());
         let sum = self
@@ -51,9 +53,10 @@ impl FPSMeasureData {
     }
 }
 
+/// The EGUI App object that provides selecting and displaying the dream
 pub struct DreamSpinner {
     first_frame: bool,
-    #[allow(dead_code)]
+    /// The dream chosen to be displayed.
     dream: Arc<RwLock<dyn Dream>>,
     primary_display: DisplayInfo,
     secondary_displays: Vec<DisplayInfo>,
@@ -104,7 +107,7 @@ impl DreamSpinner {
         let random_id =
             selected_dreams.iter().nth(random_index).unwrap().to_string();
         let dream = build_dream_by_id(&random_id);
-        dream.write().unwrap().prepare();
+        dream.write().unwrap().prepare_dream();
         dream
     }
 }
@@ -200,6 +203,8 @@ impl eframe::App for DreamSpinner {
 }
 
 impl DreamSpinner {
+    /// Adds input handling to dream windows. Basically, makes  the window close
+    /// on most inputs, according to settings.
     fn set_input(ui: &mut egui::Ui) {
         let mut need_quit = false;
         ui.input(|input| {
@@ -209,6 +214,8 @@ impl DreamSpinner {
         });
         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::None);
         if need_quit {
+            // Close the app by pressing close signal to every viewport and
+            // let egui handle the rest.
             let mut ids: Vec<egui::ViewportId> = Vec::new();
             ui.ctx().input(|i| {
                 ids = i.raw.viewports.keys().cloned().collect();
@@ -220,7 +227,8 @@ impl DreamSpinner {
     }
 }
 
-// Detects all viewports and requests updates to all of them
+/// Requests an update for the given viewport. Detects the appropriate time
+/// to send with the update request.
 fn request_updates(
     ui: &mut egui::Ui,
     is_primary_viewport: bool,

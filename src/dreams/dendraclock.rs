@@ -75,11 +75,7 @@ impl Dream for DendraClockDream {
         self.options_ui(ui);
     }
 
-    fn prepare(&mut self) {}
-
-    fn needs_loading(&self) -> bool {
-        false
-    }
+    fn prepare_dream(&mut self) {}
 
     fn store(&self) {
         let txt = toml::to_string(&self.dream_settings).unwrap();

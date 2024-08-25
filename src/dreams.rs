@@ -39,10 +39,10 @@ pub trait Dream: Sync + Send {
     fn name(&self) -> &'static str;
 
     /// Prepare dream for rendering (load resources, initialize RNG etc.)    
-    fn prepare(&mut self) {}
+    fn prepare_dream(&mut self) {}
 
     /// Return true if prepare() takes noticeable time enough to warrant a loading screen
-    fn needs_loading(&self) -> bool {
+    fn require_load_screen(&self) -> bool {
         false
     }
 
@@ -52,7 +52,9 @@ pub trait Dream: Sync + Send {
     fn preferred_update_rate(&self) -> DreamUpdateRate;
 
     /// Dream type determines what kind of window to perpare for it.
-    fn get_type(&self) -> DreamType;
+    fn get_type(&self) -> DreamType {
+        DreamType::Egui
+    }
 
     /// Draws the dream in egui. This function MUST be thread-safe.
     fn dream_egui(&self, _ui: &mut egui::Ui) {
