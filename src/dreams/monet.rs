@@ -1,7 +1,7 @@
 use crate::dreams::*;
 
 pub const DREAM_ID: DreamId = "monet";
-pub const DREAM_NAME: &'static str = "Monet";
+pub const DREAM_NAME: &'static str = "Monet (dev)";
 
 pub struct MonetDream {
     dream_settings: MonetSettings,
