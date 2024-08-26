@@ -46,6 +46,12 @@ pub trait Dream: Sync + Send {
         false
     }
 
+    /// Indicates that dream is in development and should not be shown to the end user.
+    /// Allow dev mode in settings to see this dream.
+    fn in_development(&self) -> bool {
+        false
+    }
+
     /// Returns the update rate of the dream. It shows how often a dream is intended to
     /// update, but actual updates may be required more frequently. May change
     /// dynamically.

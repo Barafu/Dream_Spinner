@@ -34,6 +34,10 @@ pub struct SettingsRaw {
     /// to use when creating secondary displays.
     /// Has no meaning when there is only 1 display.
     pub viewport_mode: ViewportMode,
+
+    /// Display dreams that are still in development. This setting has
+    /// no UI toggle and must be set by editing settings file.
+    pub allow_dev_dreams: bool,
 }
 
 impl Default for SettingsRaw {
@@ -44,6 +48,7 @@ impl Default for SettingsRaw {
             show_fps: false,
             selected_dreams: BTreeSet::from(["fractal_clock".to_string()]),
             viewport_mode: ViewportMode::Immediate,
+            allow_dev_dreams: false,
         }
     }
 }

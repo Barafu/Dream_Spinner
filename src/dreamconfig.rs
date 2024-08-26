@@ -54,6 +54,7 @@ impl eframe::App for DreamConfigApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
+                    // Common tabs
                     ui.selectable_value(
                         &mut self.active_panel,
                         ActivePanel::Generic,
@@ -71,7 +72,18 @@ impl eframe::App for DreamConfigApp {
                     );
                     //ui.separator();
                     // TODO: Can't enable separator: breaks UI for some reason
+
+                    // List all dreams as tabs
+                    let app_dev_mode =
+                        SETTINGS.read().unwrap().allow_dev_dreams;
                     for dream in self.zoo.values() {
+                        // If dev mode is off, don't show dev dreams at all. If it is on, show them
+                        // but append (dev) to their names.
+                        let dream_dev_mode =
+                            dream.read().unwrap().in_development();
+                        if dream_dev_mode && !app_dev_mode {
+                            continue;
+                        };
                         ui.selectable_value(
                             &mut self.active_panel,
                             ActivePanel::Dream(dream.read().unwrap().id()),
@@ -154,10 +166,14 @@ impl DreamConfigApp {
         // So the solution is not to save the change if the user
         // unchecks the last dream.
         let settings = &mut SETTINGS.write().unwrap();
+        let dev_mode = settings.allow_dev_dreams;
 
         ui.label("Select dream:");
         let st = &mut settings.selected_dreams;
         for (id, dream) in self.zoo.iter() {
+            if !dev_mode && dream.read().unwrap().in_development() {
+                continue;
+            }
             let mut active = st.contains(id);
             ui.checkbox(&mut active, dream.read().unwrap().name());
             if active {

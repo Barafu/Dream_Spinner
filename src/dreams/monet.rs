@@ -36,6 +36,10 @@ impl Dream for MonetDream {
         DREAM_NAME
     }
 
+    fn in_development(&self) -> bool {
+        true
+    }
+
     fn preferred_update_rate(&self) -> super::DreamUpdateRate {
         super::DreamUpdateRate::Fixed(0.5)
     }
