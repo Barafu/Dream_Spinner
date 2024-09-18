@@ -1,4 +1,4 @@
-use crate::dreams::*;
+use crate::{app_settings::ColorScheme, dreams::*};
 use chrono::{Local, Timelike};
 use egui::{widgets::*, *};
 use std::f32::consts::TAU;
@@ -8,6 +8,7 @@ pub const DREAM_NAME: &'static str = "Fractal Clock";
 
 pub struct DendraClockDream {
     dream_settings: DendraClockSettings,
+    color_scheme: ColorScheme,
 }
 
 #[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize)]
@@ -39,7 +40,8 @@ impl Default for DendraClockSettings {
 impl Dream for DendraClockDream {
     fn new() -> Self {
         let local_settings = DendraClockSettings::default();
-        let mut d = Self { dream_settings: local_settings };
+        let color_scheme = SETTINGS.read().unwrap().color_scheme.clone();
+        let mut d = Self { dream_settings: local_settings, color_scheme };
         let txt = SETTINGS
             .read()
             .unwrap()
@@ -177,6 +179,13 @@ impl DendraClockDream {
             rect,
         );
 
+        let background = Shape::rect_filled(
+            rect,
+            Rounding::ZERO,
+            self.color_scheme.background,
+        );
+        shapes.push(background);
+
         let mut paint_line = |points: [Pos2; 2], color: Color32, width: f32| {
             let line = [to_screen * points[0], to_screen * points[1]];
 
@@ -209,11 +218,7 @@ impl DendraClockDream {
         for (i, hand) in hands.iter().enumerate() {
             let center = pos2(0.0, 0.0);
             let end = center + hand.vec;
-            paint_line(
-                [center, end],
-                Color32::from_additive_luminance(255),
-                width,
-            );
+            paint_line([center, end], self.color_scheme.foreground, width);
             if i < 2 {
                 nodes.push(Node { pos: end, dir: hand.vec });
             }
@@ -222,27 +227,21 @@ impl DendraClockDream {
         let mut luminance = 0.7; // Start dimmer than main hands
 
         let mut new_nodes = Vec::new();
-        for _ in 0..self.dream_settings.depth {
+        for depth in 0..self.dream_settings.depth {
             new_nodes.clear();
             new_nodes.reserve(nodes.len() * 2);
 
             luminance *= self.dream_settings.luminance_factor;
             width *= self.dream_settings.width_factor;
 
-            let luminance_u8 = (255.0 * luminance).round() as u8;
-            if luminance_u8 == 0 {
-                break;
-            }
+            let depth_color =
+                self.color_scheme.foreground.gamma_multiply(luminance);
 
             for &rotor in &hand_rotors {
                 for a in &nodes {
                     let new_dir = rotor * a.dir;
                     let b = Node { pos: a.pos + new_dir, dir: new_dir };
-                    paint_line(
-                        [a.pos, b.pos],
-                        Color32::from_additive_luminance(luminance_u8),
-                        width,
-                    );
+                    paint_line([a.pos, b.pos], depth_color, width);
                     new_nodes.push(b);
                 }
             }
