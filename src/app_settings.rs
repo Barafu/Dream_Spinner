@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
-use log;
+use egui::Color32;
+use log::{self, info};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Display,
@@ -14,7 +16,7 @@ pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> = LazyLock::new(|| {
     RwLock::new(SettingsRaw::read_from_file_default().unwrap())
 });
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(default)]
 /// Contains all persistant settings of the application
 pub struct SettingsRaw {
@@ -38,6 +40,9 @@ pub struct SettingsRaw {
     /// Display dreams that are still in development. This setting has
     /// no UI toggle and must be set by editing settings file.
     pub allow_dev_dreams: bool,
+
+    /// Selected color scheme that dreams should use.
+    pub color_scheme: ColorScheme,
 }
 
 impl Default for SettingsRaw {
@@ -49,6 +54,7 @@ impl Default for SettingsRaw {
             selected_dreams: BTreeSet::from(["fractal_clock".to_string()]),
             viewport_mode: ViewportMode::Immediate,
             allow_dev_dreams: false,
+            color_scheme: ColorScheme::default(),
         }
     }
 }
@@ -108,9 +114,7 @@ impl SettingsRaw {
     }
 }
 
-#[derive(
-    PartialEq, Debug, serde::Deserialize, serde::Serialize, Default, Clone, Copy,
-)]
+#[derive(PartialEq, Debug, Deserialize, Serialize, Default, Clone, Copy)]
 pub enum ViewportMode {
     #[default]
     Immediate,
@@ -123,5 +127,93 @@ impl Display for ViewportMode {
             ViewportMode::Immediate => write!(f, "Immediate"),
             ViewportMode::Deferred => write!(f, "Deferred"),
         }
+    }
+}
+
+// Define the structure that matches the JSON schema
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ColorScheme {
+    pub colors: [Color32; 16],
+    pub name: String,
+    pub foreground: Color32,
+    pub background: Color32,
+    pub cursor: Color32,
+}
+
+impl Default for ColorScheme {
+    fn default() -> Self {
+        Self {
+            colors: [Color32::WHITE; 16],
+            name: "None".to_string(),
+            foreground: Color32::WHITE,
+            background: Color32::BLACK,
+            cursor: Color32::YELLOW,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct ColorSchemeText {
+    color_01: String,
+    color_02: String,
+    color_03: String,
+    color_04: String,
+    color_05: String,
+    color_06: String,
+    color_07: String,
+    color_08: String,
+    color_09: String,
+    color_10: String,
+    color_11: String,
+    color_12: String,
+    color_13: String,
+    color_14: String,
+    color_15: String,
+    color_16: String,
+    name: String,
+    foreground: String,
+    background: String,
+    cursor: String,
+}
+
+impl ColorScheme {
+    fn from_color_scheme_text(cs: ColorSchemeText) -> Self {
+        Self {
+            colors: [
+                Color32::from_hex(&cs.color_01).unwrap(),
+                Color32::from_hex(&cs.color_02).unwrap(),
+                Color32::from_hex(&cs.color_03).unwrap(),
+                Color32::from_hex(&cs.color_04).unwrap(),
+                Color32::from_hex(&cs.color_05).unwrap(),
+                Color32::from_hex(&cs.color_06).unwrap(),
+                Color32::from_hex(&cs.color_07).unwrap(),
+                Color32::from_hex(&cs.color_08).unwrap(),
+                Color32::from_hex(&cs.color_09).unwrap(),
+                Color32::from_hex(&cs.color_10).unwrap(),
+                Color32::from_hex(&cs.color_11).unwrap(),
+                Color32::from_hex(&cs.color_12).unwrap(),
+                Color32::from_hex(&cs.color_13).unwrap(),
+                Color32::from_hex(&cs.color_14).unwrap(),
+                Color32::from_hex(&cs.color_15).unwrap(),
+                Color32::from_hex(&cs.color_16).unwrap(),
+            ],
+            name: cs.name,
+            foreground: Color32::from_hex(&cs.foreground).unwrap(),
+            background: Color32::from_hex(&cs.background).unwrap(),
+            cursor: Color32::from_hex(&cs.cursor).unwrap(),
+        }
+    }
+    pub fn read_default_schemes() -> BTreeMap<String, ColorScheme> {
+        let color_scheme_json = include_str!("color_scheme_data.json");
+        let color_schemes: Vec<ColorSchemeText> =
+            serde_json::from_str(&color_scheme_json).unwrap();
+        let mut color_schemes_map: BTreeMap<String, ColorScheme> =
+            BTreeMap::new();
+        for cs_t in color_schemes.into_iter() {
+            let color_scheme = ColorScheme::from_color_scheme_text(cs_t);
+            color_schemes_map.insert(color_scheme.name.clone(), color_scheme);
+        }
+        info!("Read {} color schemes", color_schemes_map.len());
+        color_schemes_map
     }
 }

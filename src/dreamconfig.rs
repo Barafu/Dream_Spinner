@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::app_settings::{SettingsRaw, ViewportMode, SETTINGS};
+use crate::app_settings::{ColorScheme, SettingsRaw, ViewportMode, SETTINGS};
 use crate::dreams::*;
 use anyhow::Result;
 
@@ -9,6 +9,7 @@ use anyhow::Result;
 enum ActivePanel {
     Generic,
     Select,
+    ColorScheme,
     About,
     Dream(DreamId), // Settings of a dream with given ID
 }
@@ -22,6 +23,9 @@ pub struct DreamConfigApp {
     /// The state of the settings as they were saved last.
     /// If current state differs from that, the save button will be enabled.
     saved_settings: SettingsRaw,
+    /// A list of all color schemes
+    color_schemes: BTreeMap<String, ColorScheme>,
+    color_schemes_keys: Vec<String>,
 }
 
 impl eframe::App for DreamConfigApp {
@@ -67,6 +71,11 @@ impl eframe::App for DreamConfigApp {
                     );
                     ui.selectable_value(
                         &mut self.active_panel,
+                        ActivePanel::ColorScheme,
+                        "Select color",
+                    );
+                    ui.selectable_value(
+                        &mut self.active_panel,
                         ActivePanel::About,
                         "About",
                     );
@@ -95,6 +104,9 @@ impl eframe::App for DreamConfigApp {
                 ui.vertical(|ui| match &self.active_panel {
                     ActivePanel::Generic => self.draw_generic(ui),
                     ActivePanel::Select => self.draw_dream_select(ui),
+                    ActivePanel::ColorScheme => {
+                        self.draw_colorscheme_config(ui)
+                    }
                     ActivePanel::About => self.draw_about(ui),
                     ActivePanel::Dream(id) => {
                         let mut dr = self.zoo[*id].write().unwrap();
@@ -117,7 +129,17 @@ impl DreamConfigApp {
             .map(|id| (id.to_string(), build_dream_by_id(id)))
             .collect();
         let saved_settings = SETTINGS.read().unwrap().clone();
-        Ok(Self { active_panel: ActivePanel::Generic, zoo, saved_settings })
+        let color_schemes: BTreeMap<String, ColorScheme> =
+            ColorScheme::read_default_schemes();
+        let color_schemes_keys: Vec<String> =
+            color_schemes.keys().cloned().collect();
+        Ok(Self {
+            active_panel: ActivePanel::Generic,
+            zoo,
+            saved_settings,
+            color_schemes,
+            color_schemes_keys,
+        })
     }
 
     fn save(&mut self) {
@@ -184,6 +206,51 @@ impl DreamConfigApp {
                 }
             }
         }
+    }
+
+    fn draw_colorscheme_config(&mut self, ui: &mut egui::Ui) {
+        use egui_extras::{Column, TableBuilder};
+
+        ui.vertical(|ui| {
+            ui.heading("Select color scheme");
+            let table = TableBuilder::new(ui)
+                .striped(false)
+                .column(Column::remainder().at_least(40.0).clip(true));
+            table.body(|body| {
+                let row_height = 28.0;
+                let num_rows = self.color_schemes.len();
+                body.rows(row_height, num_rows, |mut row| {
+                    let row_index = row.index();
+                    let mut row_text =
+                        self.color_schemes_keys[row_index].clone();
+                    let row_scheme = self.color_schemes.get(&row_text).unwrap();
+                    let highlight =
+                        SETTINGS.read().unwrap().color_scheme == *row_scheme;
+                    if highlight {
+                        row_text = format!("*** {} ***", row_text);
+                    }
+                    row.col(|ui| {
+                        egui::Frame::none().fill(row_scheme.background).show(
+                            ui,
+                            |ui| {
+                                let r = ui.add_sized(
+                                    ui.available_size(),
+                                    egui::Label::new(
+                                        egui::RichText::new(row_text)
+                                            .heading()
+                                            .color(row_scheme.foreground),
+                                    ),
+                                );
+                                if r.is_pointer_button_down_on() {
+                                    SETTINGS.write().unwrap().color_scheme =
+                                        row_scheme.clone();
+                                }
+                            },
+                        );
+                    });
+                });
+            })
+        });
     }
 
     fn draw_about(&mut self, ui: &mut egui::Ui) {
