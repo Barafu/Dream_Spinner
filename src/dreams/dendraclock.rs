@@ -227,7 +227,7 @@ impl DendraClockDream {
         let mut luminance = 0.7; // Start dimmer than main hands
 
         let mut new_nodes = Vec::new();
-        for depth in 0..self.dream_settings.depth {
+        for _depth in 0..self.dream_settings.depth {
             new_nodes.clear();
             new_nodes.reserve(nodes.len() * 2);
 
