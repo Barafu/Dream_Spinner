@@ -1,7 +1,10 @@
 #![warn(clippy::all, rust_2018_idioms)]
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+//#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use anyhow::{bail, Result};
+use env_logger::Builder;
+use log::LevelFilter;
+
 use dream_spinner::app_settings::SETTINGS;
 use dream_spinner::dreamconfig::DreamConfigApp;
 use dream_spinner::dreamrunner::DreamRunner;
@@ -112,9 +115,14 @@ fn parse_args(args_in: &[String]) -> Result<ParsedArguments> {
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> anyhow::Result<()> {
     use anyhow::anyhow;
+    use dream_spinner::user_event::UserLoopEvent;
     use winit::event_loop::{ControlFlow, EventLoop};
 
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    let mut builder = Builder::new();
+    builder.filter_level(LevelFilter::Info);
+    builder.filter_module("wgpu_core", LevelFilter::Warn);
+    builder.filter_module("wgpu_hal", LevelFilter::Warn);
+    builder.init();
 
     let args: Vec<String> = std::env::args().collect();
     let parsed = parse_args(&args).unwrap();
@@ -125,9 +133,11 @@ fn main() -> anyhow::Result<()> {
     // Display dreams
     match parsed.command {
         MainCommand::Show => {
-            let event_loop = EventLoop::new().unwrap();
+            let event_loop: EventLoop<UserLoopEvent> =
+                EventLoop::with_user_event().build().unwrap();
             event_loop.set_control_flow(ControlFlow::Poll);
-            let mut app = DreamRunner::new();
+            let event_loop_proxy = event_loop.create_proxy();
+            let mut app = DreamRunner::new(event_loop_proxy);
 
             //SETTINGS.write().unwrap().write_to_file_default()?;
             app_result =

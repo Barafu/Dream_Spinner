@@ -1,40 +1,53 @@
-use display_info::DisplayInfo;
 use log::info;
 use rand::Rng;
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use winit::application::ApplicationHandler;
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::dpi::{PhysicalPosition, PhysicalSize, Size};
 use winit::event::WindowEvent;
+use winit::event_loop::EventLoopProxy;
 use winit::monitor::MonitorHandle;
+use winit::raw_window_handle::{HasRawWindowHandle, HasWindowHandle};
 use winit::window::Window;
-use winit::window::{Fullscreen, WindowAttributes};
+use winit::window::{Fullscreen, WindowAttributes, WindowId};
 
-use glutin::{
-    config::ConfigTemplateBuilder,
-    context::ContextAttributesBuilder,
-    context::PossiblyCurrentContext,
-    display::GetGlDisplay,
-    prelude::*,
-    surface::{SurfaceAttributesBuilder, WindowSurface},
-};
+use rayon::prelude::*;
+
+use pixels::wgpu::Color;
+use pixels::{Error, Pixels, SurfaceTexture};
 
 use crate::app_settings::SETTINGS;
 use crate::dreams::*;
 use crate::fps_measure::FPSMeasureData;
+use crate::user_event::UserLoopEvent;
 
 /// Creates windows using winit and displays dreams according to settings.
 pub struct DreamRunner {
     dream: Arc<RwLock<dyn Dream>>,
     fps_measurement: FPSMeasureData,
-    windows: Vec<Window>,
+    windows: HashMap<WindowId, Window>,
+    pixels: HashMap<WindowId, Pixels>,
+    primary_window_id: Option<WindowId>,
+    pub event_loop_proxy: EventLoopProxy<UserLoopEvent>,
+    counter: usize,
 }
 
 impl DreamRunner {
-    pub fn new() -> Self {
+    pub fn new(event_loop_proxy: EventLoopProxy<UserLoopEvent>) -> Self {
         let dream = Self::select_active_dream();
         let fps_measurement = FPSMeasureData::new();
-        let windows = Vec::new();
-        Self { dream, fps_measurement, windows }
+        let windows = HashMap::new();
+        let pixels = HashMap::new();
+        Self {
+            dream,
+            fps_measurement,
+            windows,
+            pixels,
+            primary_window_id: None,
+            event_loop_proxy,
+            counter: 100,
+        }
     }
 
     /// Return Arc with the dream that will be displayed.
@@ -52,9 +65,9 @@ impl DreamRunner {
     }
 }
 
-impl ApplicationHandler for DreamRunner {
+impl ApplicationHandler<UserLoopEvent> for DreamRunner {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        info!("Monitors information");
+        info!("Winit resumed");
         let primary_monitor = event_loop
             .primary_monitor()
             .expect("Could not detect primary monitor");
@@ -107,12 +120,15 @@ impl ApplicationHandler for DreamRunner {
                 .with_title("Dream Spinner")
                 /* .with_inner_size(display.size())*/
                 .with_fullscreen(Some(Fullscreen::Borderless(Some(display))))
+                .with_visible(false)
         }
 
         // Create primary window
         let attr = build_window_attributes(primary_monitor.clone());
         let pr_window = event_loop.create_window(attr).unwrap();
-        self.windows.push(pr_window);
+        let pr_win_id = pr_window.id();
+        self.primary_window_id = Some(pr_win_id);
+        self.windows.insert(pr_win_id, pr_window);
 
         // Create secondary windows
         if SETTINGS.read().unwrap().attempt_multiscreen {
@@ -122,15 +138,35 @@ impl ApplicationHandler for DreamRunner {
                 }
                 let attr = build_window_attributes(display);
                 let window = event_loop.create_window(attr).unwrap();
-                self.windows.push(window);
+                self.windows.insert(window.id(), window);
             }
+        }
+
+        // Initialize GPU on windows
+        for window in self.windows.values() {
+            let window_size = window.inner_size();
+            let surface_texture = SurfaceTexture::new(
+                window_size.width,
+                window_size.height,
+                &window,
+            );
+            let pixels = Pixels::new(
+                window_size.width,
+                window_size.height,
+                surface_texture,
+            )
+            .unwrap();
+            let window_id = window.id();
+            self.pixels.insert(window_id, pixels);
+            info!("Initialized GPU on window {:?}", window_id);
+            window.set_visible(true);
         }
     }
 
     fn window_event(
         &mut self,
         event_loop: &winit::event_loop::ActiveEventLoop,
-        _window_id: winit::window::WindowId,
+        window_id: winit::window::WindowId,
         event: winit::event::WindowEvent,
     ) {
         match event {
@@ -153,6 +189,51 @@ impl ApplicationHandler for DreamRunner {
                 // applications which do not always need to. Applications that redraw continuously
                 // can render here instead.
                 //self.window.as_ref().unwrap().request_redraw();
+                let pixels = self.pixels.get_mut(&window_id).unwrap();
+                let frame = pixels.frame_mut();
+                //frame.fill(255);
+                let now = SystemTime::now();
+                let since_epoch = now
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
+                let in_seconds = since_epoch.as_secs();
+                let time_factor = (in_seconds % 6) as u8;
+                frame.par_chunks_exact_mut(4).for_each(|pixel| {
+                    pixel[0] = 0x00; // R
+                    pixel[1] = time_factor * 40; // G
+                    pixel[2] = 0x00; // B
+                    pixel[3] = 0xff; // A
+                });
+                if let Err(err) = pixels.render() {
+                    eprintln!("pixels.render error {}", err);
+                    event_loop.exit();
+                    return;
+                }
+
+                /*for (dst, &src) in pixels
+                    .frame_mut()
+                    .chunks_exact_mut(4)
+                    .zip(shapes.frame().iter())
+                {
+                    dst[0] = (src >> 16) as u8;
+                    dst[1] = (src >> 8) as u8;
+                    dst[2] = src as u8;
+                    dst[3] = (src >> 24) as u8;
+                }*/
+
+                //shapes.draw(now.elapsed().as_secs_f32());
+                if window_id == self.primary_window_id.unwrap() {
+                    self.fps_measurement.record_timestamp();
+                    if self.fps_measurement.is_changed() {
+                        info!("FPS: {}", self.fps_measurement);
+                    }
+                }
+
+                self.event_loop_proxy
+                    .send_event(UserLoopEvent::WindowFinishedRendering(
+                        window_id,
+                    ))
+                    .unwrap();
             }
             WindowEvent::MouseInput { device_id: _, state: _, button: _ } => {
                 // Exit on any mouse click
@@ -161,4 +242,33 @@ impl ApplicationHandler for DreamRunner {
             _ => (),
         }
     }
+
+    fn user_event(
+        &mut self,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
+        event: UserLoopEvent,
+    ) {
+        match event {
+            UserLoopEvent::WindowFinishedRendering(window_id) => {
+                if self.counter > 0 {
+                    self.counter -= 1;
+                    self.windows.values_mut().for_each(|window| {
+                        window.request_redraw();
+                    });
+                    return;
+                }
+
+                self.windows.get(&window_id).unwrap().request_redraw();
+            }
+        }
+    }
+
+    // fn about_to_wait(
+    //     &mut self,
+    //     event_loop: &winit::event_loop::ActiveEventLoop,
+    // ) {
+    //     for window in self.windows.values_mut() {
+    //         window.request_redraw();
+    //     }
+    // }
 }

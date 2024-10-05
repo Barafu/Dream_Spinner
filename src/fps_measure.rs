@@ -8,6 +8,7 @@ pub struct FPSMeasureData {
     avg: f32,
     worst: f32,
     render_timestamps: Vec<Instant>,
+    changed: bool,
 }
 
 impl std::fmt::Display for FPSMeasureData {
@@ -18,7 +19,12 @@ impl std::fmt::Display for FPSMeasureData {
 
 impl FPSMeasureData {
     pub fn new() -> Self {
-        Self { avg: -1.0, worst: -1.0, render_timestamps: Vec::new() }
+        Self {
+            avg: -1.0,
+            worst: -1.0,
+            render_timestamps: Vec::new(),
+            changed: false,
+        }
     }
     /// Call this once per frame
     pub fn record_timestamp(&mut self) {
@@ -29,7 +35,9 @@ impl FPSMeasureData {
             .unwrap()
             .duration_since(self.render_timestamps.first().cloned().unwrap())
             .as_secs_f32();
+        self.changed = false;
         if sum > FPS_MEASURE_UPDATE_SECONDS {
+            self.changed = true;
             let mut durations: Vec<Duration> =
                 Vec::with_capacity(self.render_timestamps.len() - 1);
             for t in self.render_timestamps.windows(2) {
@@ -43,5 +51,9 @@ impl FPSMeasureData {
             self.worst = 1.0 / worst;
             self.render_timestamps.clear();
         }
+    }
+
+    pub fn is_changed(&self) -> bool {
+        self.changed
     }
 }
