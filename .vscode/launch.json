@@ -20,7 +20,11 @@
                 }
             },
             "args": ["/s"],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "RUST_LOG": "debug"
+            }
         },
         {
             "type": "lldb",
@@ -38,7 +42,11 @@
                 }
             },
             "args": ["/c"],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "RUST_LOG": "debug"
+            }
         },
         {
             "type": "lldb",
