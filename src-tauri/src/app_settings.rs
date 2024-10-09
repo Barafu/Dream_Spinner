@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
-use egui::Color32;
 use log::{self, info};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -32,11 +31,6 @@ pub struct SettingsRaw {
     /// The dreams user selected to display.
     pub selected_dreams: BTreeSet<String>,
 
-    /// Viewport mode, which is what viewport creation function of eframe
-    /// to use when creating secondary displays.
-    /// Has no meaning when there is only 1 display.
-    pub viewport_mode: ViewportMode,
-
     /// Display dreams that are still in development. This setting has
     /// no UI toggle and must be set by editing settings file.
     pub allow_dev_dreams: bool,
@@ -52,7 +46,6 @@ impl Default for SettingsRaw {
             attempt_multiscreen: false,
             show_fps: false,
             selected_dreams: BTreeSet::from(["fractal_clock".to_string()]),
-            viewport_mode: ViewportMode::Immediate,
             allow_dev_dreams: false,
             color_scheme: ColorScheme::default(),
         }
@@ -114,40 +107,80 @@ impl SettingsRaw {
     }
 }
 
-#[derive(PartialEq, Debug, Deserialize, Serialize, Default, Clone, Copy)]
-pub enum ViewportMode {
-    #[default]
-    Immediate,
-    Deferred,
+//============ Color ==============
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
 }
 
-impl Display for ViewportMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ViewportMode::Immediate => write!(f, "Immediate"),
-            ViewportMode::Deferred => write!(f, "Deferred"),
+impl Color {
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+        Color { r, g, b, a: 255 }
+    }
+
+    pub fn new_with_alpha(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Color { r, g, b, a }
+    }
+
+    pub fn from_hex(hex: &str) -> Result<Self, String> {
+        let hex = hex.trim_start_matches('#');
+
+        if hex.len() != 6 && hex.len() != 8 {
+            return Err("Invalid hex color format".to_string());
         }
+
+        let r = u8::from_str_radix(&hex[0..2], 16)
+            .map_err(|_| "Invalid red value")?;
+        let g = u8::from_str_radix(&hex[2..4], 16)
+            .map_err(|_| "Invalid green value")?;
+        let b = u8::from_str_radix(&hex[4..6], 16)
+            .map_err(|_| "Invalid blue value")?;
+        let a = if hex.len() == 8 {
+            u8::from_str_radix(&hex[6..8], 16)
+                .map_err(|_| "Invalid alpha value")?
+        } else {
+            255
+        };
+
+        Ok(Color::new_with_alpha(r, g, b, a))
+    }
+
+    pub fn to_hex(&self) -> String {
+        format!("#{:02X}{:02X}{:02X}{:02X}", self.r, self.g, self.b, self.a)
     }
 }
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "RGBA({}, {}, {}, {})", self.r, self.g, self.b, self.a)
+    }
+}
+
+//============= ColorScheme ==============
 
 // Define the structure that matches the JSON schema
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ColorScheme {
-    pub colors: [Color32; 16],
+    pub colors: [Color; 16],
     pub name: String,
-    pub foreground: Color32,
-    pub background: Color32,
-    pub cursor: Color32,
+    pub foreground: Color,
+    pub background: Color,
+    pub cursor: Color,
 }
 
 impl Default for ColorScheme {
     fn default() -> Self {
         Self {
-            colors: [Color32::WHITE; 16],
+            colors: [Color::new(0, 0, 0); 16],
             name: "None".to_string(),
-            foreground: Color32::WHITE,
-            background: Color32::BLACK,
-            cursor: Color32::YELLOW,
+            foreground: Color::new(200, 200, 200),
+            background: Color::new(0, 0, 0),
+            cursor: Color::new(0, 200, 200),
         }
     }
 }
@@ -180,31 +213,32 @@ impl ColorScheme {
     fn from_color_scheme_text(cs: ColorSchemeText) -> Self {
         Self {
             colors: [
-                Color32::from_hex(&cs.color_01).unwrap(),
-                Color32::from_hex(&cs.color_02).unwrap(),
-                Color32::from_hex(&cs.color_03).unwrap(),
-                Color32::from_hex(&cs.color_04).unwrap(),
-                Color32::from_hex(&cs.color_05).unwrap(),
-                Color32::from_hex(&cs.color_06).unwrap(),
-                Color32::from_hex(&cs.color_07).unwrap(),
-                Color32::from_hex(&cs.color_08).unwrap(),
-                Color32::from_hex(&cs.color_09).unwrap(),
-                Color32::from_hex(&cs.color_10).unwrap(),
-                Color32::from_hex(&cs.color_11).unwrap(),
-                Color32::from_hex(&cs.color_12).unwrap(),
-                Color32::from_hex(&cs.color_13).unwrap(),
-                Color32::from_hex(&cs.color_14).unwrap(),
-                Color32::from_hex(&cs.color_15).unwrap(),
-                Color32::from_hex(&cs.color_16).unwrap(),
+                Color::from_hex(&cs.color_01).unwrap(),
+                Color::from_hex(&cs.color_02).unwrap(),
+                Color::from_hex(&cs.color_03).unwrap(),
+                Color::from_hex(&cs.color_04).unwrap(),
+                Color::from_hex(&cs.color_05).unwrap(),
+                Color::from_hex(&cs.color_06).unwrap(),
+                Color::from_hex(&cs.color_07).unwrap(),
+                Color::from_hex(&cs.color_08).unwrap(),
+                Color::from_hex(&cs.color_09).unwrap(),
+                Color::from_hex(&cs.color_10).unwrap(),
+                Color::from_hex(&cs.color_11).unwrap(),
+                Color::from_hex(&cs.color_12).unwrap(),
+                Color::from_hex(&cs.color_13).unwrap(),
+                Color::from_hex(&cs.color_14).unwrap(),
+                Color::from_hex(&cs.color_15).unwrap(),
+                Color::from_hex(&cs.color_16).unwrap(),
             ],
             name: cs.name,
-            foreground: Color32::from_hex(&cs.foreground).unwrap(),
-            background: Color32::from_hex(&cs.background).unwrap(),
-            cursor: Color32::from_hex(&cs.cursor).unwrap(),
+            foreground: Color::from_hex(&cs.foreground).unwrap(),
+            background: Color::from_hex(&cs.background).unwrap(),
+            cursor: Color::from_hex(&cs.cursor).unwrap(),
         }
     }
     pub fn read_default_schemes() -> BTreeMap<String, ColorScheme> {
-        let color_scheme_json = include_str!("color_scheme_data.json");
+        let color_scheme_json =
+            include_str!("../assets/color_scheme_data.json");
         let color_schemes: Vec<ColorSchemeText> =
             serde_json::from_str(&color_scheme_json).unwrap();
         let mut color_schemes_map: BTreeMap<String, ColorScheme> =
