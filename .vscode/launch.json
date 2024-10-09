@@ -7,76 +7,26 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Launch in display mode",
+            "name": "Tauri Development Debug",
             "cargo": {
-                "args": [
-                    "build",
-                    "--bin=dream_spinner",
-                    "--package=dream_spinner"
-                ],
-                "filter": {
-                    "name": "dream_spinner",
-                    "kind": "bin"
-                }
+              "args": [
+                "build",
+                "--manifest-path=./src-tauri/Cargo.toml",
+                "--no-default-features"
+              ]
             },
-            "args": ["/s"],
-            "cwd": "${workspaceFolder}"
-        },
-        {
+            // task for the `beforeDevCommand` if used, must be configured in `.vscode/tasks.json`
+            //"preLaunchTask": "ui:dev"
+          },
+          {
             "type": "lldb",
             "request": "launch",
-            "name": "Launch in config mode",
+            "name": "Tauri Production Debug",
             "cargo": {
-                "args": [
-                    "build",
-                    "--bin=dream_spinner",
-                    "--package=dream_spinner"
-                ],
-                "filter": {
-                    "name": "dream_spinner",
-                    "kind": "bin"
-                }
+              "args": ["build", "--release", "--manifest-path=./src-tauri/Cargo.toml"]
             },
-            "args": ["/c"],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'dream_spinner'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=dream_spinner"
-                ],
-                "filter": {
-                    "name": "dream_spinner",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'dream_spinner'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=dream_spinner",
-                    "--package=dream_spinner"
-                ],
-                "filter": {
-                    "name": "dream_spinner",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        }
-    ]
+            // task for the `beforeBuildCommand` if used, must be configured in `.vscode/tasks.json`
+            //"preLaunchTask": "ui:build"
+          }
+        ],    
 }
