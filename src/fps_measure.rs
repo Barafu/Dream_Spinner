@@ -22,7 +22,9 @@ impl FPSMeasureData {
         Self {
             avg: -1.0,
             worst: -1.0,
-            render_timestamps: Vec::new(),
+            render_timestamps: Vec::with_capacity(
+                (FPS_MEASURE_UPDATE_SECONDS * 121.0) as usize,
+            ),
             changed: false,
         }
     }

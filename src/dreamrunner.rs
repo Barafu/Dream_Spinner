@@ -1,52 +1,47 @@
+use chrono::Local;
 use log::info;
 use rand::Rng;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex, RwLock};
+use std::thread;
+use std::time::SystemTime;
 use winit::application::ApplicationHandler;
-use winit::dpi::{PhysicalPosition, PhysicalSize, Size};
 use winit::event::WindowEvent;
 use winit::event_loop::EventLoopProxy;
 use winit::monitor::MonitorHandle;
-use winit::raw_window_handle::{HasRawWindowHandle, HasWindowHandle};
 use winit::window::Window;
 use winit::window::{Fullscreen, WindowAttributes, WindowId};
 
-use rayon::prelude::*;
-
-use pixels::wgpu::Color;
-use pixels::{Error, Pixels, SurfaceTexture};
+use wgpu;
 
 use crate::app_settings::SETTINGS;
 use crate::dreams::*;
-use crate::fps_measure::FPSMeasureData;
 use crate::user_event::UserLoopEvent;
 
 /// Creates windows using winit and displays dreams according to settings.
-pub struct DreamRunner {
+pub struct DreamRunner<'dr> {
     dream: Arc<RwLock<dyn Dream>>,
-    fps_measurement: FPSMeasureData,
-    windows: HashMap<WindowId, Window>,
-    pixels: HashMap<WindowId, Pixels>,
+    wgpu_data: HashMap<WindowId, Arc<Mutex<WgpuData<'dr>>>>,
     primary_window_id: Option<WindowId>,
     pub event_loop_proxy: EventLoopProxy<UserLoopEvent>,
-    counter: usize,
+    window_finished_rendering: HashSet<WindowId>,
+    redraw_thread: Option<thread::JoinHandle<()>>,
 }
 
-impl DreamRunner {
+impl<'dr> DreamRunner<'dr> {
     pub fn new(event_loop_proxy: EventLoopProxy<UserLoopEvent>) -> Self {
         let dream = Self::select_active_dream();
-        let fps_measurement = FPSMeasureData::new();
-        let windows = HashMap::new();
-        let pixels = HashMap::new();
+        //let fps_measurement = HashMap::new();
+        let wgpu_data = HashMap::new();
+        let window_finished_rendering = HashSet::new();
         Self {
             dream,
-            fps_measurement,
-            windows,
-            pixels,
+            //fps_measurement,
+            wgpu_data,
             primary_window_id: None,
             event_loop_proxy,
-            counter: 100,
+            window_finished_rendering,
+            redraw_thread: None,
         }
     }
 
@@ -63,9 +58,33 @@ impl DreamRunner {
         dream.write().unwrap().prepare_dream();
         dream
     }
+
+    fn redraw(&mut self, window_id: WindowId) {
+        let wgpu_data = self.wgpu_data.get(&window_id);
+        if wgpu_data.is_none() {
+            return;
+        }
+
+        let mut wgpu_data = wgpu_data.unwrap().lock().unwrap();
+        wgpu_data.update();
+        match wgpu_data.render() {
+            Ok(_) => {}
+            // Reconfigure the surface if lost
+            Err(wgpu::SurfaceError::Lost) => {
+                let new_size = wgpu_data.size.clone();
+                wgpu_data.resize(new_size);
+            }
+            // The system is out of memory, we should probably quit
+            Err(wgpu::SurfaceError::OutOfMemory) => {
+                // event_loop.exit();
+            }
+            // All other errors (Outdated, Timeout) should be resolved by the next frame
+            Err(e) => eprintln!("{:?}", e),
+        }
+    }
 }
 
-impl ApplicationHandler<UserLoopEvent> for DreamRunner {
+impl<'dr> ApplicationHandler<UserLoopEvent> for DreamRunner<'dr> {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         info!("Winit resumed");
         let primary_monitor = event_loop
@@ -118,9 +137,8 @@ impl ApplicationHandler<UserLoopEvent> for DreamRunner {
         fn build_window_attributes(display: MonitorHandle) -> WindowAttributes {
             Window::default_attributes()
                 .with_title("Dream Spinner")
-                /* .with_inner_size(display.size())*/
                 .with_fullscreen(Some(Fullscreen::Borderless(Some(display))))
-                .with_visible(false)
+                .with_visible(true)
         }
 
         // Create primary window
@@ -128,9 +146,13 @@ impl ApplicationHandler<UserLoopEvent> for DreamRunner {
         let pr_window = event_loop.create_window(attr).unwrap();
         let pr_win_id = pr_window.id();
         self.primary_window_id = Some(pr_win_id);
-        self.windows.insert(pr_win_id, pr_window);
 
-        // Create secondary windows
+        //self.windows.insert(pr_win_id, aw);
+        let mut created_windows = Vec::new();
+        created_windows.push(pr_window);
+
+        //Create secondary windows
+
         if SETTINGS.read().unwrap().attempt_multiscreen {
             for display in event_loop.available_monitors() {
                 if display == primary_monitor {
@@ -138,29 +160,31 @@ impl ApplicationHandler<UserLoopEvent> for DreamRunner {
                 }
                 let attr = build_window_attributes(display);
                 let window = event_loop.create_window(attr).unwrap();
-                self.windows.insert(window.id(), window);
+                created_windows.push(window);
             }
         }
 
         // Initialize GPU on windows
-        for window in self.windows.values() {
-            let window_size = window.inner_size();
-            let surface_texture = SurfaceTexture::new(
-                window_size.width,
-                window_size.height,
-                &window,
-            );
-            let pixels = Pixels::new(
-                window_size.width,
-                window_size.height,
-                surface_texture,
-            )
-            .unwrap();
-            let window_id = window.id();
-            self.pixels.insert(window_id, pixels);
-            info!("Initialized GPU on window {:?}", window_id);
-            window.set_visible(true);
+        for window in created_windows.into_iter() {
+            let window_id = &window.id();
+            window.request_redraw();
+            let wgpu_data = pollster::block_on(WgpuData::<'dr>::new(window));
+            let agpu = Arc::new(Mutex::new(wgpu_data));
+
+            info!("Initialized GPU on window {:?}", &window_id);
+            self.wgpu_data.insert(window_id.clone(), agpu);
         }
+        self.event_loop_proxy
+            .send_event(UserLoopEvent::WindowFinishedRendering(pr_win_id))
+            .unwrap();
+
+        // self.redraw_thread = Some(thread::spawn(move || {
+        //     for wgpu_rr in arcs {
+        //         let mut wgpu = wgpu_rr.lock().unwrap();
+        //         wgpu.update();
+        //         wgpu.render();
+        //     }
+        // }));
     }
 
     fn window_event(
@@ -189,45 +213,16 @@ impl ApplicationHandler<UserLoopEvent> for DreamRunner {
                 // applications which do not always need to. Applications that redraw continuously
                 // can render here instead.
                 //self.window.as_ref().unwrap().request_redraw();
-                let pixels = self.pixels.get_mut(&window_id).unwrap();
-                let frame = pixels.frame_mut();
-                //frame.fill(255);
-                let now = SystemTime::now();
-                let since_epoch = now
-                    .duration_since(UNIX_EPOCH)
-                    .expect("Time went backwards");
-                let in_seconds = since_epoch.as_secs();
-                let time_factor = (in_seconds % 6) as u8;
-                frame.par_chunks_exact_mut(4).for_each(|pixel| {
-                    pixel[0] = 0x00; // R
-                    pixel[1] = time_factor * 40; // G
-                    pixel[2] = 0x00; // B
-                    pixel[3] = 0xff; // A
-                });
-                if let Err(err) = pixels.render() {
-                    eprintln!("pixels.render error {}", err);
-                    event_loop.exit();
-                    return;
-                }
 
-                /*for (dst, &src) in pixels
-                    .frame_mut()
-                    .chunks_exact_mut(4)
-                    .zip(shapes.frame().iter())
-                {
-                    dst[0] = (src >> 16) as u8;
-                    dst[1] = (src >> 8) as u8;
-                    dst[2] = src as u8;
-                    dst[3] = (src >> 24) as u8;
-                }*/
+                /*self.event_loop_proxy
+                .send_event(UserLoopEvent::WindowFinishedRendering(
+                    window_id,
+                ))
+                .unwrap();*/
 
-                //shapes.draw(now.elapsed().as_secs_f32());
-                if window_id == self.primary_window_id.unwrap() {
-                    self.fps_measurement.record_timestamp();
-                    if self.fps_measurement.is_changed() {
-                        info!("FPS: {}", self.fps_measurement);
-                    }
-                }
+                //self.window_finished_rendering.insert(window_id);
+
+                //self.event_loop_proxy.send_event(UserLoopEvent::WindowFinishedRendering(window_id)).unwrap();
 
                 self.event_loop_proxy
                     .send_event(UserLoopEvent::WindowFinishedRendering(
@@ -239,6 +234,7 @@ impl ApplicationHandler<UserLoopEvent> for DreamRunner {
                 // Exit on any mouse click
                 event_loop.exit();
             }
+
             _ => (),
         }
     }
@@ -250,25 +246,176 @@ impl ApplicationHandler<UserLoopEvent> for DreamRunner {
     ) {
         match event {
             UserLoopEvent::WindowFinishedRendering(window_id) => {
-                if self.counter > 0 {
-                    self.counter -= 1;
-                    self.windows.values_mut().for_each(|window| {
-                        window.request_redraw();
-                    });
-                    return;
+                //self.wgpu_data.get(&window_id).unwrap().lock().unwrap().window().request_redraw();
+                // for wgpu_data in self.wgpu_data.values() {
+                //     wgpu_data.lock().unwrap().window().request_redraw();
+                // }
+                let ids: Vec<WindowId> =
+                    self.wgpu_data.keys().cloned().collect();
+                for id in ids {
+                    self.redraw(id);
                 }
-
-                self.windows.get(&window_id).unwrap().request_redraw();
             }
         }
     }
 
-    // fn about_to_wait(
-    //     &mut self,
-    //     event_loop: &winit::event_loop::ActiveEventLoop,
-    // ) {
-    //     for window in self.windows.values_mut() {
-    //         window.request_redraw();
-    //     }
-    // }
+    fn about_to_wait(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+    ) {
+        // for wgpu_data in self.wgpu_data.values() {
+        //    let mut window = wgpu_data.lock().unwrap();
+        //    window.window().request_redraw();
+        // }
+        self.event_loop_proxy
+            .send_event(UserLoopEvent::WindowFinishedRendering(
+                WindowId::dummy(),
+            ))
+            .unwrap();
+    }
+}
+
+struct WgpuData<'window> {
+    surface: wgpu::Surface<'window>,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
+    size: winit::dpi::PhysicalSize<u32>,
+    // The window must be declared after the surface so
+    // it gets dropped after it as the surface contains
+    // unsafe references to the window's resources.
+    window: Arc<Window>,
+}
+
+impl<'window> WgpuData<'window> {
+    // Creating some of the wgpu types requires async code
+    async fn new(window: Window) -> WgpuData<'window> {
+        let window_size = window.inner_size();
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::DX12,
+            ..Default::default()
+        });
+
+        let win = Arc::new(window);
+
+        let surface = instance.create_surface(win.clone()).unwrap();
+
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::default(),
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await
+            .unwrap();
+
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::default(),
+                    label: None,
+                    memory_hints: Default::default(),
+                },
+                None, // Trace path
+            )
+            .await
+            .unwrap();
+
+        let surface_caps = surface.get_capabilities(&adapter);
+        let surface_format = surface_caps
+            .formats
+            .iter()
+            .find(|f| f.is_srgb())
+            .copied()
+            .unwrap_or(surface_caps.formats[0]);
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: window_size.width,
+            height: window_size.height,
+            present_mode: wgpu::PresentMode::AutoVsync,
+            alpha_mode: wgpu::CompositeAlphaMode::Opaque,
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+        surface.configure(&device, &config);
+        let mut r = WgpuData {
+            surface,
+            device,
+            queue,
+            config,
+            size: window_size,
+            window: win,
+        };
+        //r.resize(r.window.inner_size());
+        r
+    }
+
+    pub fn window(&self) -> &Window {
+        &self.window
+    }
+
+    pub fn window_id(&self) -> WindowId {
+        self.window.id()
+    }
+
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.size = new_size;
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
+            self.surface.configure(&self.device, &self.config);
+        }
+    }
+
+    fn input(&mut self, event: &WindowEvent) -> bool {
+        false
+    }
+
+    fn update(&mut self) {}
+
+    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        let output = self.surface.get_current_texture()?;
+        let view =
+            output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self.device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("Render Encoder") },
+        );
+        {
+            let _render_pass =
+                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Render Pass"),
+                    color_attachments: &[Some(
+                        wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color {
+                                    r: 0.1,
+                                    g: get_milliseconds_since_midnight(),
+                                    b: 0.3,
+                                    a: 1.0,
+                                }),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        },
+                    )],
+                    depth_stencil_attachment: None,
+                    occlusion_query_set: None,
+                    timestamp_writes: None,
+                });
+        }
+
+        // submit will accept anything that implements IntoIter
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+
+        Ok(())
+    }
+}
+
+fn get_milliseconds_since_midnight() -> f64 {
+    let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    (now.as_millis() % 3000) as f64 / 3000.0
 }
