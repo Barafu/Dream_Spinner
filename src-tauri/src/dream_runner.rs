@@ -39,7 +39,6 @@ impl DreamRunner {
                         primary_window.current_monitor()?.unwrap();
                     for (i, monitor) in monitors.iter().enumerate() {
                         if !compare_monitors(&primary_monitor, monitor) {
-                            dbg!(&monitor);
                             let label = format!("extra{}", i);
                             let pos = calculate_window_position(monitor);
                             //let size = calculate_window_size(monitor);
@@ -53,7 +52,7 @@ impl DreamRunner {
                                 //.inner_size(size.0, size.1)
                                 //.fullscreen(true)
                                 .build()?;
-                            secondary_window.set_fullscreen(true);
+                            secondary_window.set_fullscreen(true)?;
                         }
                     }
                 }

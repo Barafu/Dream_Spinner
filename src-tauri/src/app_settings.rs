@@ -4,7 +4,6 @@ use log::{self, info};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fmt::Display,
     fs::File,
     path::{Path, PathBuf},
     sync::{LazyLock, RwLock},

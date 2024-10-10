@@ -5,9 +5,7 @@ mod app_settings;
 mod dream_runner;
 mod parse_cli;
 
-use anyhow::{Context, Ok, Result};
-
-use app_settings::SETTINGS;
+use anyhow::Result;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 // #[tauri::command]
