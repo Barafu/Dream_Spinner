@@ -14,11 +14,7 @@ impl DreamRunner {
 
     pub fn initialise(&mut self) -> Result<()> {
         use std::result::Result::Ok; // Block anyhow's Result for the `context` macro
-                                     // let tauri_context = tauri::generate_context!();
-                                     // tauri::Builder::default()
-                                     //     .plugin(tauri_plugin_shell::init())
-                                     //     .run(tauri_context)
-                                     //     .context("error while running tauri application");
+        const FULLSCREEN: bool = true;
 
         let need_multiscreen = SETTINGS.read().unwrap().attempt_multiscreen;
 
@@ -30,7 +26,7 @@ impl DreamRunner {
                     "primary",
                     tauri::WebviewUrl::App("index.html".into()),
                 )
-                .fullscreen(true)
+                .fullscreen(FULLSCREEN)
                 .build()?;
 
                 if need_multiscreen {
@@ -52,12 +48,13 @@ impl DreamRunner {
                                 //.inner_size(size.0, size.1)
                                 //.fullscreen(true)
                                 .build()?;
-                            secondary_window.set_fullscreen(true)?;
+                            secondary_window.set_fullscreen(FULLSCREEN)?;
                         }
                     }
                 }
                 std::result::Result::Ok(())
             })
+            .plugin(tauri_plugin_process::init())
             .run(tauri::generate_context!())
             .expect("error while running app");
         Ok(())
