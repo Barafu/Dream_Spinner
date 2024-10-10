@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_settings;
+mod dream_runner;
 mod parse_cli;
 
 use anyhow::{Context, Ok, Result};
@@ -32,12 +33,8 @@ fn main() -> Result<()> {
 }
 
 fn show_dream() -> Result<()> {
-    use std::result::Result::Ok; // Block anyhow's Result for the `context` macro
-    let tauri_context = tauri::generate_context!();
-    tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
-        .run(tauri_context)
-        .context("error while running tauri application");
+    let mut dr = dream_runner::DreamRunner::new()?;
+    dr.initialise()?;
     Ok(())
 }
 
