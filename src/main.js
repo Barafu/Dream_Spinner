@@ -1,35 +1,27 @@
 const { exit, relaunch } = window.__TAURI__.process;
 
-// async function greet() {
-//   // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-//   greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
-// }
+let canvas = document.getElementById("dreamCanvas");
 
-function init() {
-  let canvas = document.getElementById("dreamCanvas");
+addEventListener("mouseup", (event) => {
+  if (event.button === 0) {
+    exit(0);
+  }
+});
+
+window.addEventListener('resize', resizeCanvas);
+
+function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  //canvas.requestFullscreen();
-  canvas.onmouseup = function () {
-    console.log("Canvas mouse up");
-    exit(0);
-  };
-  window.requestAnimationFrame(clock);
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  // greetInputEl = document.querySelector("#greet-input");
-  // greetMsgEl = document.querySelector("#greet-msg");
-  // document.querySelector("#greet-form").addEventListener("submit", (e) => {
-  //   e.preventDefault();
-  //   greet();
-  // });
-  init();
+  resizeCanvas();
+  window.requestAnimationFrame(clock);
 });
 
 function clock() {
   const now = new Date();
-  const canvas = document.getElementById("dreamCanvas");
   const ctx = canvas.getContext("2d");
   ctx.save();
   const canvas_dim = Math.min(canvas.width, canvas.height);
