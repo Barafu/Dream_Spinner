@@ -54,7 +54,7 @@ impl DreamRunner {
             })
             .plugin(tauri_plugin_shell::init())
             .run(tauri::generate_context!())
-            .expect("error while running app");
+            .expect("error while running tauri application");
         Ok(())
     }
 }
