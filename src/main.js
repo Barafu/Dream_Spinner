@@ -1,10 +1,10 @@
-//const { exit, relaunch } = window.__TAURI__.process;
+import { exit } from '@tauri-apps/plugin-process';
 
 let canvas = document.getElementById("dreamCanvas");
 
 addEventListener("mouseup", (event) => {
-  if (event.button === 0) {
-    //exit(0);
+  if (event.button == 0) {
+    exit(0);
   }
 });
 
