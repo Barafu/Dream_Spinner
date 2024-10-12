@@ -31,40 +31,35 @@ impl DreamRunner {
 
                 if need_multiscreen {
                     let monitors = primary_window.available_monitors()?;
-                    let primary_monitor =
-                        primary_window.current_monitor()?.unwrap();
+                    let primary_monitor = primary_window.current_monitor()?.unwrap();
                     for (i, monitor) in monitors.iter().enumerate() {
                         if !compare_monitors(&primary_monitor, monitor) {
                             let label = format!("extra{}", i);
                             let pos = calculate_window_position(monitor);
                             //let size = calculate_window_size(monitor);
-                            let secondary_window =
-                                tauri::WebviewWindowBuilder::new(
-                                    app,
-                                    label,
-                                    tauri::WebviewUrl::App("index.html".into()),
-                                )
-                                .position(pos.0, pos.1)
-                                //.inner_size(size.0, size.1)
-                                //.fullscreen(true)
-                                .build()?;
+                            let secondary_window = tauri::WebviewWindowBuilder::new(
+                                app,
+                                label,
+                                tauri::WebviewUrl::App("index.html".into()),
+                            )
+                            .position(pos.0, pos.1)
+                            //.inner_size(size.0, size.1)
+                            //.fullscreen(true)
+                            .build()?;
                             secondary_window.set_fullscreen(FULLSCREEN)?;
                         }
                     }
                 }
                 std::result::Result::Ok(())
             })
-            .plugin(tauri_plugin_process::init())
+            .plugin(tauri_plugin_shell::init())
             .run(tauri::generate_context!())
             .expect("error while running app");
         Ok(())
     }
 }
 
-fn compare_monitors(
-    a: &tauri::window::Monitor,
-    b: &tauri::window::Monitor,
-) -> bool {
+fn compare_monitors(a: &tauri::window::Monitor, b: &tauri::window::Monitor) -> bool {
     a.name() == b.name() && a.position() == b.position() && a.size() == b.size()
 }
 

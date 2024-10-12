@@ -10,9 +10,8 @@ use std::{
 };
 
 /// The one and only global settings object. Don't lock it for long.
-pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> = LazyLock::new(|| {
-    RwLock::new(SettingsRaw::read_from_file_default().unwrap())
-});
+pub static SETTINGS: LazyLock<RwLock<SettingsRaw>> =
+    LazyLock::new(|| RwLock::new(SettingsRaw::read_from_file_default().unwrap()));
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(default)]
@@ -91,10 +90,8 @@ impl SettingsRaw {
             return Ok(settings_file);
         }
 
-        let user_dirs =
-            ProjectDirs::from("goo", "Barafu Albino", "Dream Spinner").ok_or(
-                anyhow!("Can not detect settings directory in user folder"),
-            )?;
+        let user_dirs = ProjectDirs::from("goo", "Barafu Albino", "Dream Spinner")
+            .ok_or(anyhow!("Can not detect settings directory in user folder"))?;
         let settings_dir = user_dirs.config_dir();
         let settings_file = settings_dir.join(SETTINGS_FILE_NAME);
         if settings_file.is_file() {
@@ -133,15 +130,11 @@ impl Color {
             return Err("Invalid hex color format".to_string());
         }
 
-        let r = u8::from_str_radix(&hex[0..2], 16)
-            .map_err(|_| "Invalid red value")?;
-        let g = u8::from_str_radix(&hex[2..4], 16)
-            .map_err(|_| "Invalid green value")?;
-        let b = u8::from_str_radix(&hex[4..6], 16)
-            .map_err(|_| "Invalid blue value")?;
+        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| "Invalid red value")?;
+        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| "Invalid green value")?;
+        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| "Invalid blue value")?;
         let a = if hex.len() == 8 {
-            u8::from_str_radix(&hex[6..8], 16)
-                .map_err(|_| "Invalid alpha value")?
+            u8::from_str_radix(&hex[6..8], 16).map_err(|_| "Invalid alpha value")?
         } else {
             255
         };
@@ -236,12 +229,9 @@ impl ColorScheme {
         }
     }
     pub fn read_default_schemes() -> BTreeMap<String, ColorScheme> {
-        let color_scheme_json =
-            include_str!("../assets/color_scheme_data.json");
-        let color_schemes: Vec<ColorSchemeText> =
-            serde_json::from_str(&color_scheme_json).unwrap();
-        let mut color_schemes_map: BTreeMap<String, ColorScheme> =
-            BTreeMap::new();
+        let color_scheme_json = include_str!("../assets/color_scheme_data.json");
+        let color_schemes: Vec<ColorSchemeText> = serde_json::from_str(&color_scheme_json).unwrap();
+        let mut color_schemes_map: BTreeMap<String, ColorScheme> = BTreeMap::new();
         for cs_t in color_schemes.into_iter() {
             let color_scheme = ColorScheme::from_color_scheme_text(cs_t);
             color_schemes_map.insert(color_scheme.name.clone(), color_scheme);

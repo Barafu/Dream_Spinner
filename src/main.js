@@ -1,23 +1,23 @@
-const { exit, relaunch } = window.__TAURI__.process;
+//const { exit, relaunch } = window.__TAURI__.process;
 
 let canvas = document.getElementById("dreamCanvas");
 
 addEventListener("mouseup", (event) => {
   if (event.button === 0) {
-    exit(0);
+    //exit(0);
   }
 });
 
 window.addEventListener('resize', resizeCanvas);
 
-function resizeCanvas() {
+function resizeCanvas() { 
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   resizeCanvas();
-  window.requestAnimationFrame(dendraClock);
+  window.requestAnimationFrame(clock);
 });
 
 function clock() {

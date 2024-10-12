@@ -1,9 +1,0 @@
-{
-  "$schema": "./schemas/desktop-schema.json",
-  "identifier": "main-capability",
-  "description": "Capability for the main window",
-  "windows": ["*"],
-  "permissions": [
-    "process:default"
-  ]
-}

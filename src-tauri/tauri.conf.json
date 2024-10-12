@@ -1,17 +1,19 @@
 {
+  "$schema": "https://schema.tauri.app/config/2.0.0",
   "productName": "dream_spinner",
-  "mainBinaryName": "dream_spinner",
   "version": "0.1.0",
-  "identifier": "goo.barafu_albino.dream_spinner",
+  "identifier": "com.dream_spinner.app",
   "build": {
-    "frontendDist": "../src"
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true,
     "security": {
       "csp": null
     }
-  },  
+  },
   "bundle": {
     "active": true,
     "targets": "all",
@@ -22,6 +24,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
-  },
-  "plugins": {}
+  }
 }
