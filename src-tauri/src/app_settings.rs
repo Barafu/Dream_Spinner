@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
 use log::{self, info};
@@ -97,9 +99,9 @@ impl SettingsRaw {
         if settings_file.is_file() {
             return Ok(settings_file);
         }
-        std::fs::create_dir_all(&settings_dir)?;
+        std::fs::create_dir_all(settings_dir)?;
         File::create(&settings_file)?;
-        return Ok(settings_file);
+        Ok(settings_file)
     }
 }
 
@@ -142,7 +144,7 @@ impl Color {
         Ok(Color::new_with_alpha(r, g, b, a))
     }
 
-    pub fn to_hex(&self) -> String {
+    pub fn as_hex(&self) -> String {
         format!("#{:02X}{:02X}{:02X}{:02X}", self.r, self.g, self.b, self.a)
     }
 }
@@ -230,7 +232,7 @@ impl ColorScheme {
     }
     pub fn read_default_schemes() -> BTreeMap<String, ColorScheme> {
         let color_scheme_json = include_str!("../assets/color_scheme_data.json");
-        let color_schemes: Vec<ColorSchemeText> = serde_json::from_str(&color_scheme_json).unwrap();
+        let color_schemes: Vec<ColorSchemeText> = serde_json::from_str(color_scheme_json).unwrap();
         let mut color_schemes_map: BTreeMap<String, ColorScheme> = BTreeMap::new();
         for cs_t in color_schemes.into_iter() {
             let color_scheme = ColorScheme::from_color_scheme_text(cs_t);

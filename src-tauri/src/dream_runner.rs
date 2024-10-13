@@ -66,6 +66,6 @@ fn compare_monitors(a: &tauri::window::Monitor, b: &tauri::window::Monitor) -> b
 
 fn calculate_window_position(monitor: &tauri::window::Monitor) -> (f64, f64) {
     let (x, y) = (monitor.position().x as f64, monitor.position().y as f64);
-    let scale = monitor.scale_factor() as f64;
+    let scale = monitor.scale_factor();
     (x / scale, y / scale)
 }
