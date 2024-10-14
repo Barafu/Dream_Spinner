@@ -1,6 +1,6 @@
 import { exit } from '@tauri-apps/plugin-process';
 
-let canvas = document.getElementById("dreamCanvas");
+let canvas: HTMLCanvasElement = document.getElementById("dreamCanvas") as HTMLCanvasElement;
 
 addEventListener("mouseup", (event) => {
   if (event.button == 0) {
@@ -10,19 +10,24 @@ addEventListener("mouseup", (event) => {
 
 window.addEventListener('resize', resizeCanvas);
 
-function resizeCanvas() { 
+function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   resizeCanvas();
-  window.requestAnimationFrame(clock);
+  window.requestAnimationFrame(dendraClock);
 });
 
+/*
 function clock() {
   const now = new Date();
   const ctx = canvas.getContext("2d");
+  if (ctx === null) {
+    console.error("Failed to get 2D drawing context");
+    return;
+  }
   ctx.save();
   const canvas_dim = Math.min(canvas.width, canvas.height);
   const canv_scale = canvas_dim / 330.0;
@@ -122,9 +127,15 @@ function clock() {
 
   window.requestAnimationFrame(clock);
 }
+*/
 
 class Hand {
-  constructor(startX, startY, length, angle) {
+  startX: number;
+  startY: number;
+  length: number;
+  angle: number;
+
+  constructor(startX: number, startY: number, length: number, angle: number) {
     this.startX = startX;
     this.startY = startY;
     this.length = length;
@@ -145,18 +156,25 @@ class Hand {
     return { x: endX, y: endY };
   }
 
-  rotateClockwise(angleInRadians) {
+  rotateClockwise(angleInRadians: number) {
     this.angle = sum_rotations(this.angle, angleInRadians);
   }
 }
 class AnalogClock {
-  constructor(time, centerX, centerY, current_depth, settings) {
+  time: Date;
+  centerX: number;
+  centerY: number;
+  current_depth: number;
+  settings: any;
+  hourHand: Hand;
+  minuteHand: Hand;
+  secondHand: Hand;
+  constructor(time: Date, centerX: number, centerY: number, current_depth: number, settings: any) {
     this.time = time;
     this.centerX = centerX;
     this.centerY = centerY;
     this.current_depth = current_depth;
     this.settings = settings;
-
 
     const hours = time.getHours() + time.getMinutes() / 60.0 + time.getSeconds() / 3600.0;
     const minutes = time.getMinutes() + time.getSeconds() / 60.0;
@@ -169,7 +187,7 @@ class AnalogClock {
     this.secondHand = new Hand(centerX, centerY, arm_length, seconds * Math.PI / 30);
   }
 
-  draw(ctx) {
+  draw(ctx: CanvasRenderingContext2D) {
     const arm_width = this.settings.START_LINE_WIDTH * Math.pow(this.settings.WIDTH_FACTOR, this.current_depth);
     ctx.lineWidth = arm_width;
     if (this.current_depth == 1) {
@@ -196,53 +214,54 @@ class AnalogClock {
     ctx.stroke();
   }
 
-  rotateClockwise(angleInRadians) {
+  rotateClockwise(angleInRadians: number) {
     this.hourHand.rotateClockwise(angleInRadians);
     this.minuteHand.rotateClockwise(angleInRadians);
     this.secondHand.rotateClockwise(angleInRadians);
   }
 
-  rotateToHour(hour_angle) {
+  rotateToHour(hour_angle: number) {
     const current_hour_angle = this.hourHand.angle;
     const rotation = hour_angle - current_hour_angle;
     this.rotateClockwise(rotation);
   }
 }
 
+class DendraClockPersistentOptions {
+  ZOOM = 0.25;
+  START_LINE_WIDTH = 8;
+  DEPTH = 9;
+  LENGTH_FACTOR = 0.95;
+  LUMINANCE_FACTOR = 0.8;
+  WIDTH_FACTOR = 0.7;
+}
+
 function dendraClock() {
-  const settings = {
-    ZOOM: 0.25,
-    START_LINE_WIDTH: 8,
-    DEPTH: 9,
-    LENGTH_FACTOR: 0.95,
-    LUMINANCE_FACTOR: 0.8,
-    WIDTH_FACTOR: 0.7,
-    NOW: new Date(),
-    CTX: ctx,
-  };
-  const ctx = canvas.getContext("2d");
+  const settings = new DendraClockPersistentOptions();
+  const ctx = canvas.getContext("2d")!;
+  const now = new Date();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  dendra_clock_recursive(settings, 0, canvas.width / 2, canvas.height / 2, 0.0);
+  dendra_clock_recursive(settings, now, ctx,0, canvas.width / 2, canvas.height / 2, 0.0);
   window.requestAnimationFrame(dendraClock);
 }
 
-function dendra_clock_recursive(settings, current_depth, x, y, extra_rotation) {
+function dendra_clock_recursive(settings: DendraClockPersistentOptions, now: Date, ctx: CanvasRenderingContext2D, current_depth: number, x: number, y: number, extra_rotation: number) {
   current_depth++;
   if (current_depth == settings.DEPTH) return;
-  const clock = new AnalogClock(settings.NOW, x, y, current_depth, settings);
+  const clock = new AnalogClock(now, x, y, current_depth, settings);
   clock.rotateToHour(extra_rotation);
-  clock.draw(settings.CTX, current_depth);
-  const hour_pos = clock.hourHand.calculateEndPoint();
+  clock.draw(ctx);
+  //const hour_pos = clock.hourHand.calculateEndPoint();
   const minute_pos = clock.minuteHand.calculateEndPoint();
   const seconds_pos = clock.secondHand.calculateEndPoint();
   const minutes_rotation = clock.minuteHand.angle;
   const seconds_rotation = clock.secondHand.angle;
   //dendra_clock_recursive(settings, current_depth, hour_pos.x, hour_pos.y);
-  dendra_clock_recursive(settings, current_depth, minute_pos.x, minute_pos.y, minutes_rotation);
-  dendra_clock_recursive(settings, current_depth, seconds_pos.x, seconds_pos.y, seconds_rotation);
+  dendra_clock_recursive(settings, now, ctx, current_depth, minute_pos.x, minute_pos.y, minutes_rotation);
+  dendra_clock_recursive(settings, now, ctx,current_depth, seconds_pos.x, seconds_pos.y, seconds_rotation);
 }
 
-function sum_rotations(rotation1, rotation2) {
+function sum_rotations(rotation1: number, rotation2: number) {
   // Add the two rotation values
   let sum = rotation1 + rotation2;
   // Normalize the result to be within the range [0, 2π)
@@ -253,93 +272,4 @@ function sum_rotations(rotation1, rotation2) {
   }
   return sum;
 }
-
-/*function dendraClock() {
-  const now = new Date();
-  const ctx = canvas.getContext("2d");
-  const ZOOM = 0.25;
-  const START_LINE_WIDTH = 4;
-  const DEPTH = 9;
-  const LENGTH_FACTOR = 0.8;
-  const LUMINANCE_FACTOR = 0.8;
-  const WIDTH_FACTOR = 0.9;
-  let lineCount = 0;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = 1;
-  ctx.lineWidth = START_LINE_WIDTH * window.devicePixelRatio;
-
-  const middle_x = canvas.width / 2;
-  const middle_y = canvas.height / 2;
-  dendra_drawClock(ctx, middle_x, middle_y, START_LINE_WIDTH * window.devicePixelRatio, 9, false);
-  window.requestAnimationFrame(dendraClock);
-}
-
-function dendra_drawClock(ctx, x, y, lineWidth, depth, recursive = true) {
-  if (depth === 0) {
-    return;
-  }
-  const now = new Date();
-  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
-  const min = now.getMinutes();
-  const hr = now.getHours() % 12;
-
-  const hand_length = 120;// - (7-depth)*10;
-  ctx.save();
-  ctx.translate(x, y);
-  if (!recursive) {
-  ctx.rotate(-Math.PI / 2);
-  }
-  ctx.lineWidth = lineWidth;
-
-  if (!recursive){
-    ctx.strokeStyle = "yellow";
-    ctx.fillStyle = "yellow";
-  }
-  else {
-    ctx.strokeStyle = "white";
-    ctx.fillStyle = "white";
-  }
-
-  // Rotate canvas according to hours
-  // unless it is the first stage
-  if (recursive) {
-  
-  }
-
-  // Draw hour hand only on first stage.
-  if (!recursive){
-  ctx.save();
-  ctx.rotate(
-    (Math.PI / 6) * hr + (Math.PI / 360) * min + (Math.PI / 21600) * sec,
-  );
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(hand_length*0.7, 0);
-  ctx.stroke();
-  ctx.restore();
-  }
-
-  // Write Minutes
-  ctx.save();
-  ctx.rotate((Math.PI / 30) * min + (Math.PI / 1800) * sec);
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(hand_length, 0);
-  ctx.stroke();
-  dendra_drawClock(ctx, hand_length, 0, lineWidth*0.7, depth - 1);
-  ctx.restore();
-
-  // Write seconds
-  ctx.save();
-  ctx.rotate((sec * Math.PI) / 30);
-  
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(hand_length, 0);
-  ctx.stroke();
-  dendra_drawClock(ctx, hand_length, 0, lineWidth*0.6, depth - 1);  
-  ctx.restore();
-
-  ctx.restore();
-}*/
 
