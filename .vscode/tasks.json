@@ -1,0 +1,70 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cargo",
+			"command": "clippy", // Check project for errors
+			"problemMatcher": {
+				"base": "$rustc",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}/src-tauri"
+				]
+			},
+			"label": "Project: cargo clippy",
+			"group": {  // This assigns the task to Ctrl+Shift+B
+				"kind": "build",
+				"isDefault": true
+			},
+			"options": {
+				"cwd": "${workspaceFolder}/src-tauri"
+			}
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"problemMatcher": {
+				"base": "$rustc",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}/src-tauri"
+				]
+			},
+			"label": "Project: cargo build devel",
+			"options": {
+				"cwd": "${workspaceFolder}/src-tauri"
+			}
+		},
+		{
+			"label": "Project: run dev server",
+			"type": "shell",
+			"isBackground": true,
+			"command": "npm",
+			"args": [
+				"run",
+				"dev"
+			],
+			"problemMatcher": [],
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"presentation": {
+				"reveal": "never",
+				"panel": "new",
+				"close": true
+			}
+		},
+		{
+			"label": "Project: full release",
+			"type": "shell",
+			"isBackground": true,
+			"command": "npm",
+			"args": [
+				"run",
+				"tauri",
+				"build"
+			],
+			"problemMatcher": []
+		}
+	]
+}
