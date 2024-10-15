@@ -7,7 +7,7 @@ import { dendraClock } from "./dreams/dendraclock";
 
 let canvas: HTMLCanvasElement = document.getElementById("dreamCanvas") as HTMLCanvasElement;
 
-let dream: string = "clock";
+let dream: string = "dendraclock";
 
 addEventListener("mouseup", (event) => {
   if (event.button == 0) {

@@ -53,16 +53,12 @@ impl DreamRunner {
                 }
                 std::result::Result::Ok(())
             })
-            .plugin(tauri_plugin_shell::init())
             .plugin(tauri_plugin_process::init())
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
         Ok(())
     }
 }
-
-#[tauri::command]
-fn window_finished_loading() {}
 
 fn compare_monitors(a: &tauri::window::Monitor, b: &tauri::window::Monitor) -> bool {
     a.name() == b.name() && a.position() == b.position() && a.size() == b.size()
