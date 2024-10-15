@@ -14,7 +14,7 @@ impl DreamRunner {
     pub fn initialise(&mut self) -> Result<()> {
         use std::result::Result::Ok; // Block anyhow's Result for the `context` macro
         const FULLSCREEN: bool = true;
-        const RUNNER_PAGE: &str = "src/runner.html";
+        const RUNNER_PAGE: &str = "index.html";
 
         let need_multiscreen = SETTINGS.read().unwrap().attempt_multiscreen;
 
