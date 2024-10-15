@@ -45,9 +45,9 @@ class AnalogClock {
     this.current_depth = current_depth;
     this.settings = settings;
 
-    const hours = time.getHours() + time.getMinutes() / 60.0 + time.getSeconds() / 3600.0;
-    const minutes = time.getMinutes() + time.getSeconds() / 60.0;
     const seconds = time.getSeconds() + time.getMilliseconds() / 1000.0;
+    const minutes = time.getMinutes() + seconds / 60.0;
+    const hours = time.getHours() + minutes / 60.0;
 
     const arm_length = settings.START_ARM_LENGTH * Math.pow(settings.LENGTH_FACTOR, current_depth);
 
