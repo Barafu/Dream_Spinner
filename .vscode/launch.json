@@ -6,7 +6,7 @@
       "name": "Tauri Development",
       "request": "launch",
       "program": "${workspaceFolder}/src-tauri/target/debug/dream_spinner.exe",
-      "preLaunchTask": "Project: cargo build devel",
+      "preLaunchTask": "Project: cargo build devel"
     },
     {
       "type": "lldb",
@@ -14,6 +14,6 @@
       "request": "launch",
       "program": "${workspaceFolder}/src-tauri/target/release/dream_spinner.exe",
       "preLaunchTask": "Project: full release"
-    },
+    }
   ]
 }

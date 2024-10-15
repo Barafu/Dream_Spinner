@@ -1,7 +1,9 @@
 # Dream_spinner
- A collection of simple screensavers
+
+A collection of simple screensavers
 
 # UNDER CONSTRUCTION
+
 # HARD HAT REQUIRED
 
 Inspired by xscreensaver framework. The idea is to provide platform that allows

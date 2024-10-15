@@ -1,11 +1,13 @@
-import { exit } from '@tauri-apps/plugin-process';
+import { exit } from "@tauri-apps/plugin-process";
 //import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { clock } from "./dreams/clocks";
 import { dendraClock } from "./dreams/dendraclock";
 
-let canvas: HTMLCanvasElement = document.getElementById("dreamCanvas") as HTMLCanvasElement;
+let canvas: HTMLCanvasElement = document.getElementById(
+  "dreamCanvas",
+) as HTMLCanvasElement;
 
 let dream: string = "dendraclock";
 
@@ -15,7 +17,7 @@ addEventListener("mouseup", (event) => {
   }
 });
 
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener("resize", resizeCanvas);
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -39,5 +41,3 @@ window.addEventListener("DOMContentLoaded", () => {
   const appWindow = getCurrentWindow();
   appWindow.show();
 });
-
-

@@ -38,7 +38,13 @@ class AnalogClock {
   hourHand: Hand;
   minuteHand: Hand;
   secondHand: Hand;
-  constructor(time: Date, centerX: number, centerY: number, current_depth: number, settings: any) {
+  constructor(
+    time: Date,
+    centerX: number,
+    centerY: number,
+    current_depth: number,
+    settings: any,
+  ) {
     this.time = time;
     this.centerX = centerX;
     this.centerY = centerY;
@@ -49,16 +55,38 @@ class AnalogClock {
     const minutes = time.getMinutes() + seconds / 60.0;
     const hours = time.getHours() + minutes / 60.0;
 
-    const arm_length = settings.START_ARM_LENGTH * Math.pow(settings.LENGTH_FACTOR, current_depth);
+    const arm_length =
+      settings.START_ARM_LENGTH *
+      Math.pow(settings.LENGTH_FACTOR, current_depth);
 
-    this.hourHand = new Hand(centerX, centerY, arm_length * 0.7, hours * Math.PI / 6);
-    this.minuteHand = new Hand(centerX, centerY, arm_length, minutes * Math.PI / 30);
-    this.secondHand = new Hand(centerX, centerY, arm_length, seconds * Math.PI / 30);
+    this.hourHand = new Hand(
+      centerX,
+      centerY,
+      arm_length * 0.7,
+      (hours * Math.PI) / 6,
+    );
+    this.minuteHand = new Hand(
+      centerX,
+      centerY,
+      arm_length,
+      (minutes * Math.PI) / 30,
+    );
+    this.secondHand = new Hand(
+      centerX,
+      centerY,
+      arm_length,
+      (seconds * Math.PI) / 30,
+    );
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    const arm_width = this.settings.START_LINE_WIDTH * Math.pow(this.settings.WIDTH_FACTOR, this.current_depth);
-    const transparency_factor = Math.pow(this.settings.LUMINANCE_FACTOR, this.current_depth-1);
+    const arm_width =
+      this.settings.START_LINE_WIDTH *
+      Math.pow(this.settings.WIDTH_FACTOR, this.current_depth);
+    const transparency_factor = Math.pow(
+      this.settings.LUMINANCE_FACTOR,
+      this.current_depth - 1,
+    );
     const color = `rgba(255, 255, 255, ${transparency_factor})`;
     ctx.lineWidth = arm_width;
     ctx.lineCap = "round";
@@ -114,10 +142,26 @@ export function dendraClock(canvas: HTMLCanvasElement) {
   ctx.globalCompositeOperation = "destination-over";
   const now = new Date();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  dendra_clock_recursive(settings, now, ctx, 0, canvas.width / 2, canvas.height / 2, 0.0);
+  dendra_clock_recursive(
+    settings,
+    now,
+    ctx,
+    0,
+    canvas.width / 2,
+    canvas.height / 2,
+    0.0,
+  );
 }
 
-function dendra_clock_recursive(settings: DendraClockPersistentOptions, now: Date, ctx: CanvasRenderingContext2D, current_depth: number, x: number, y: number, extra_rotation: number) {
+function dendra_clock_recursive(
+  settings: DendraClockPersistentOptions,
+  now: Date,
+  ctx: CanvasRenderingContext2D,
+  current_depth: number,
+  x: number,
+  y: number,
+  extra_rotation: number,
+) {
   if (current_depth == settings.DEPTH) return;
   current_depth++;
   const clock = new AnalogClock(now, x, y, current_depth, settings);
@@ -130,8 +174,24 @@ function dendra_clock_recursive(settings: DendraClockPersistentOptions, now: Dat
   const seconds_pos = clock.secondHand.calculateEndPoint();
   const minutes_rotation = clock.minuteHand.angle;
   const seconds_rotation = clock.secondHand.angle;
-  dendra_clock_recursive(settings, now, ctx, current_depth, minute_pos.x, minute_pos.y, minutes_rotation);
-  dendra_clock_recursive(settings, now, ctx, current_depth, seconds_pos.x, seconds_pos.y, seconds_rotation);
+  dendra_clock_recursive(
+    settings,
+    now,
+    ctx,
+    current_depth,
+    minute_pos.x,
+    minute_pos.y,
+    minutes_rotation,
+  );
+  dendra_clock_recursive(
+    settings,
+    now,
+    ctx,
+    current_depth,
+    seconds_pos.x,
+    seconds_pos.y,
+    seconds_rotation,
+  );
 }
 
 function sum_rotations(rotation1: number, rotation2: number) {
