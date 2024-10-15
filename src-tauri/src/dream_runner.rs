@@ -14,6 +14,7 @@ impl DreamRunner {
     pub fn initialise(&mut self) -> Result<()> {
         use std::result::Result::Ok; // Block anyhow's Result for the `context` macro
         const FULLSCREEN: bool = true;
+        const RUNNER_PAGE: &str = "src/runner.html";
 
         let need_multiscreen = SETTINGS.read().unwrap().attempt_multiscreen;
 
@@ -23,7 +24,7 @@ impl DreamRunner {
                 let primary_window = tauri::WebviewWindowBuilder::new(
                     app,
                     "primary",
-                    tauri::WebviewUrl::App("index.html".into()),
+                    tauri::WebviewUrl::App(RUNNER_PAGE.into()),
                 )
                 .fullscreen(FULLSCREEN)
                 .visible(false)
@@ -40,11 +41,9 @@ impl DreamRunner {
                             let secondary_window = tauri::WebviewWindowBuilder::new(
                                 app,
                                 label,
-                                tauri::WebviewUrl::App("index.html".into()),
+                                tauri::WebviewUrl::App(RUNNER_PAGE.into()),
                             )
                             .position(pos.0, pos.1)
-                            //.inner_size(size.0, size.1)
-                            //.fullscreen(true)
                             .visible(false)
                             .build()?;
                             secondary_window.set_fullscreen(FULLSCREEN)?;
