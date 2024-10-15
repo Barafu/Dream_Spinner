@@ -1,6 +1,5 @@
 use crate::app_settings::SETTINGS;
 use anyhow::{Ok, Result};
-
 /// Displays dreams. Loads settings, creates windows, chooses a dream and runs it.
 
 #[derive(Debug)]
@@ -27,6 +26,7 @@ impl DreamRunner {
                     tauri::WebviewUrl::App("index.html".into()),
                 )
                 .fullscreen(FULLSCREEN)
+                .visible(false)
                 .build()?;
 
                 if need_multiscreen {
@@ -45,6 +45,7 @@ impl DreamRunner {
                             .position(pos.0, pos.1)
                             //.inner_size(size.0, size.1)
                             //.fullscreen(true)
+                            .visible(false)
                             .build()?;
                             secondary_window.set_fullscreen(FULLSCREEN)?;
                         }
@@ -59,6 +60,9 @@ impl DreamRunner {
         Ok(())
     }
 }
+
+#[tauri::command]
+fn window_finished_loading() {}
 
 fn compare_monitors(a: &tauri::window::Monitor, b: &tauri::window::Monitor) -> bool {
     a.name() == b.name() && a.position() == b.position() && a.size() == b.size()

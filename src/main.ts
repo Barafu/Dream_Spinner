@@ -1,4 +1,6 @@
 import { exit } from '@tauri-apps/plugin-process';
+//import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { clock } from "./dreams/clocks";
 import { dendraClock } from "./dreams/dendraclock";
@@ -33,6 +35,9 @@ function animate() {
 window.addEventListener("DOMContentLoaded", () => {
   resizeCanvas();
   animate();
+
+  const appWindow = getCurrentWindow();
+  appWindow.show();
 });
 
 

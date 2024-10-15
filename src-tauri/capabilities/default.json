@@ -7,7 +7,7 @@
   ],
   "permissions": [
     "core:default",
-    "process:default"
-    
+    "process:default",
+    "core:window:allow-show"    
   ]
 }
