@@ -11,7 +11,7 @@ impl DreamRunner {
         Ok(s)
     }
 
-    pub fn initialise(&mut self) -> Result<()> {
+    pub fn launch(&mut self) -> Result<()> {
         use std::result::Result::Ok; // Block anyhow's Result for the `context` macro
         const FULLSCREEN: bool = true;
         const RUNNER_PAGE: &str = "index.html";

@@ -10,9 +10,25 @@
     },
     {
       "type": "lldb",
+      "name": "Tauri Development Settings",
+      "request": "launch",
+      "program": "${workspaceFolder}/src-tauri/target/debug/dream_spinner.exe",
+      "args": ["/c"],
+      "preLaunchTask": "Project: cargo build devel"
+    },
+    {
+      "type": "lldb",
       "name": "Tauri Release",
       "request": "launch",
       "program": "${workspaceFolder}/src-tauri/target/release/dream_spinner.exe",
+      "preLaunchTask": "Project: full release"
+    },
+    {
+      "type": "lldb",
+      "name": "Tauri Release Settings",
+      "request": "launch",
+      "program": "${workspaceFolder}/src-tauri/target/release/dream_spinner.exe",
+      "args": ["/c"],
       "preLaunchTask": "Project: full release"
     }
   ]

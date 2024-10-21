@@ -7,6 +7,7 @@
 mod app_settings;
 mod dream_runner;
 mod parse_cli;
+mod settings_window;
 
 use anyhow::Result;
 
@@ -28,12 +29,14 @@ pub fn run() -> Result<()> {
 
 fn show_dream() -> Result<()> {
     let mut dr = dream_runner::DreamRunner::new()?;
-    dr.initialise()?;
+    dr.launch()?;
     Ok(())
 }
 
 fn show_config() -> Result<()> {
-    todo!();
+    let mut sw = settings_window::SettingsWindow::new();
+    sw.launch()?;
+    Ok(())
 }
 
 fn show_preview(_handle: usize) -> Result<()> {
