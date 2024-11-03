@@ -1,4 +1,5 @@
-let _performance_text: string = "Not set";
+let performance_text: string = "Not set";
+const SHOW_PERFORMANCE = false;
 
 class Hand {
   startX: number;
@@ -105,7 +106,7 @@ class AnalogClock {
 class DendraClockPersistentOptions {
   ZOOM = 0.25;
   START_LINE_WIDTH = 10;
-  DEPTH = 8;
+  DEPTH = 4;
   LENGTH_FACTOR = 0.9;
   LUMINANCE_FACTOR = 0.9;
   WIDTH_FACTOR = 0.7;
@@ -140,7 +141,7 @@ export function dendraClock(canvas: HTMLCanvasElement) {
   // ===== Calculate stage =====
   // Calculate all arms positions and save them to hands_map
   const now = new Date();
-  let clock_tasks: ClockTask[] = []; 
+  let clock_tasks: ClockTask[] = [];
 
   clock_tasks.push(new ClockTask(canvas.width / 2, canvas.height / 2, 0, 0));
 
@@ -200,9 +201,11 @@ export function dendraClock(canvas: HTMLCanvasElement) {
     }
     ctx.stroke();
   }
-  // ctx.fillStyle = "yellow";
-  // ctx.font = "20px serif";
-  // ctx.fillText(performance_text, 10, 20);
+  if (SHOW_PERFORMANCE) {
+    ctx.fillStyle = "yellow";
+    ctx.font = "20px serif";
+    ctx.fillText(performance_text, 10, 20);
+  }
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   const draw_timestamp = performance.now();
@@ -262,7 +265,7 @@ function performanses(start: DOMHighResTimeStamp, calc: DOMHighResTimeStamp, dra
   const calc_perf = process_stage(stage_calc);
   const draw_perf = process_stage(stage_draw);
 
-  _performance_text = `Calculation: ${calc_perf.toFixed(2)}hz, Drawing: ${draw_perf.toFixed(2)}hz`;
+  performance_text = `Calculation: ${calc_perf.toFixed(2)}hz, Drawing: ${draw_perf.toFixed(2)}hz`;
 
   stage_calc.length = 0;
   stage_draw.length = 0;
