@@ -1,23 +1,13 @@
 {
   "name": "dream_spinner",
-  "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "description": "A collection of screensavers",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "@tauri-apps/api": ">=2.0.0",
-    "@tauri-apps/plugin-process": "^2.0.0",
-    "@tauri-apps/plugin-shell": ">=2.0.0"
-  },
+  "author": "Barafu Albino <barafu_develops@albino.email>",
+  "license": "MIT",
   "devDependencies": {
-    "@tauri-apps/cli": ">=2.0.0",
-    "prettier": "3.3.3",
-    "typescript": "^5.2.2",
-    "vite": "^5.3.1"
+    "vite": "^5.4.10"
   }
 }

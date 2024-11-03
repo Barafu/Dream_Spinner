@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "dream-spinner"
+version = "0.1.0"
+description = "A collection of screensavers"
+authors = ["Barafu Albino Cheetah <barafu_develops@albino.email>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12,<3.13"
+pywebview = "^5.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
