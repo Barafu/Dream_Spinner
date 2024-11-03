@@ -35,7 +35,7 @@ class Connection:
 
 
 def show_window(window):
-    window.show()
+    window.restore()
 
 
 class App:
@@ -53,7 +53,8 @@ class App:
                 screen=screen,
                 fullscreen=True,
                 js_api=self.connection,
-                hidden=True,
+                minimized=True,
+                background_color="#000000",
             )
             w.events.loaded += show_window
             self.windows.append(w)
