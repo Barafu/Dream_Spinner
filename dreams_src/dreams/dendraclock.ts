@@ -106,7 +106,7 @@ class AnalogClock {
 class DendraClockPersistentOptions {
   ZOOM = 0.25;
   START_LINE_WIDTH = 10;
-  DEPTH = 4;
+  DEPTH = 9;
   LENGTH_FACTOR = 0.9;
   LUMINANCE_FACTOR = 0.9;
   WIDTH_FACTOR = 0.7;
