@@ -1,13 +1,15 @@
 {
   "version": "2.0.0",
-  "tasks": [    
+  "tasks": [
     {
       "label": "Project: run dev server",
       "type": "shell",
       "isBackground": true,
       "command": "npx",
-      "args": ["vite", "dev"],
-      "problemMatcher": [],
+      "args": [
+        "vite",
+        "dev"
+      ],
       "runOptions": {
         "runOn": "folderOpen"
       },
@@ -15,15 +17,20 @@
         "reveal": "never",
         "panel": "new",
         "close": true
-      }
+      },
+      "problemMatcher": []
     },
     {
-      "label": "Project: full release",
+      "label": "Project: vite build",
       "type": "shell",
-      "isBackground": true,
-      "command": "npm",
-      "args": ["run", "tauri", "build"],
+      "command": "npx vite build",
       "problemMatcher": []
+    },
+    {
+      "label": "Project: run pyinstaller",
+      "type": "shell",
+      "command": "poetry run pyinstaller --distpath release --add-data dist:dist --windowed -y python_src/dreamspinner.py",
+      "problemMatcher": [] 
     }
   ]
 }
