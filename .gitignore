@@ -12,11 +12,3 @@ dist
 dist-ssr
 *.local
 
-# Editor directories and files
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
