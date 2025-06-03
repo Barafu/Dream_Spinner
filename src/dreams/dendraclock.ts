@@ -1,6 +1,9 @@
 let performance_text: string = "Not set";
 const SHOW_PERFORMANCE = false;
 
+const HALF_PI = Math.PI / 2.0;
+const DVA_PI = Math.PI * 2.0;
+
 class Hand {
   startX: number;
   startY: number;
@@ -14,120 +17,91 @@ class Hand {
     this.startY = startY;
     this.length = length;
     this.angle = angle; // in radians, 0.0 is straight up
+    this.calculateEndPoint();
   }
 
   calculateEndPoint() {
-    let angle = this.angle - Math.PI / 2.0;
+    let angle = this.angle;
 
     // Calculate the change in x and y
-    const deltaX = this.length * Math.cos(angle);
-    const deltaY = this.length * Math.sin(angle);
+    const deltaX = this.length * Math.sin(angle);
+    const deltaY = this.length * Math.cos(angle);
 
     // Calculate end point
     this.endX = this.startX + deltaX;
-    this.endY = this.startY + deltaY; // Subtract because y-axis is inverted in most computer graphics systems
-  }
-
-  rotateClockwise(angleInRadians: number) {
-    this.angle = sum_rotations(this.angle, angleInRadians);
-  }
-}
-class AnalogClock {
-  time: Date;
-  centerX: number;
-  centerY: number;
-  current_depth: number;
-  settings: DendraClockPersistentOptions;
-  hourHand: Hand;
-  minuteHand: Hand;
-  secondHand: Hand;
-  constructor(
-    time: Date,
-    centerX: number,
-    centerY: number,
-    current_depth: number,
-    settings: any,
-  ) {
-    this.time = time;
-    this.centerX = centerX;
-    this.centerY = centerY;
-    this.current_depth = current_depth;
-    this.settings = settings;
-
-    const seconds = time.getSeconds() + time.getMilliseconds() / 1000.0;
-    const minutes = time.getMinutes() + seconds / 60.0;
-    const hours = time.getHours() + minutes / 60.0;
-
-    const arm_length =
-      settings.START_ARM_LENGTH *
-      Math.pow(settings.LENGTH_FACTOR, current_depth);
-
-    this.hourHand = new Hand(
-      centerX,
-      centerY,
-      arm_length * 0.7,
-      (hours * Math.PI) / 6,
-    );
-    this.minuteHand = new Hand(
-      centerX,
-      centerY,
-      arm_length,
-      (minutes * Math.PI) / 30,
-    );
-    this.secondHand = new Hand(
-      centerX,
-      centerY,
-      arm_length,
-      (seconds * Math.PI) / 30,
-    );
-  }
-
-  calculateEndPoints() {
-    this.hourHand.calculateEndPoint();
-    this.minuteHand.calculateEndPoint();
-    this.secondHand.calculateEndPoint();
-  }
-
-  rotateClockwise(angleInRadians: number) {
-    this.hourHand.rotateClockwise(angleInRadians);
-    this.minuteHand.rotateClockwise(angleInRadians);
-    this.secondHand.rotateClockwise(angleInRadians);
-
-    this.calculateEndPoints();
-  }
-
-  rotateToHour(hour_angle: number) {
-    const current_hour_angle = this.hourHand.angle + Math.PI;
-    const rotation = hour_angle - current_hour_angle;
-    this.rotateClockwise(rotation);
+    this.endY = this.startY - deltaY;
   }
 }
 
 class DendraClockPersistentOptions {
   ZOOM = 0.25;
-  START_LINE_WIDTH = 10;
-  DEPTH = 4;
-  LENGTH_FACTOR = 0.9;
-  LUMINANCE_FACTOR = 0.9;
+  START_LINE_WIDTH = 8;
+  DEPTH = 8;
+  LENGTH_FACTOR = 0.8;
+  LUMINANCE_FACTOR = 0.8;
   WIDTH_FACTOR = 0.7;
-  START_ARM_LENGTH = 150;
+  START_ARM_LENGTH = 250;
 }
 
 class ClockTask {
   x: number;
   y: number;
-  depth: number;
   rotation: number;
-  constructor(x: number, y: number, depth: number, rotation: number) {
+  constructor(x: number, y: number, rotation: number) {
     this.x = x;
     this.y = y;
-    this.depth = depth;
     this.rotation = rotation;
   }
 }
 
+class ClockTaskResult {
+  hands: Hand[];
+  tasks: ClockTask[];
+  constructor() {
+    this.hands = [];
+    this.tasks = [];
+  }
+}
+
+class ClockTaskAngles {
+  hour_angle: number;
+  minute_angle: number;
+  second_angle: number;
+}
+
+function processClockTask(clock_task: ClockTask, angles: ClockTaskAngles, depth: number, settings: DendraClockPersistentOptions) {
+
+  let ccma = angles.minute_angle + clock_task.rotation;
+  let ccsa = angles.second_angle + clock_task.rotation;
+  let hand_length = settings.START_ARM_LENGTH * Math.pow(settings.LENGTH_FACTOR, depth);
+  let m_hand = new Hand(clock_task.x, clock_task.y, hand_length, ccma);
+  let s_hand = new Hand(clock_task.x, clock_task.y, hand_length, ccsa);
+  
+  
+  let result = new ClockTaskResult();
+  
+  
+  result.hands.push(m_hand);
+  result.hands.push(s_hand);
+  
+  if (depth == 0) {
+    let ccha = angles.hour_angle + clock_task.rotation;
+    let h_hand = new Hand(clock_task.x, clock_task.y, hand_length * 0.7, ccha);
+    result.hands.push(h_hand);
+  }
+
+  if (depth < settings.DEPTH) {
+    let mt = new ClockTask(m_hand.endX, m_hand.endY,  m_hand.angle - angles.hour_angle + Math.PI );
+    let st = new ClockTask(s_hand.endX, s_hand.endY,  s_hand.angle - angles.hour_angle + Math.PI );
+    result.tasks.push(mt);
+    result.tasks.push(st);
+  }
+
+  return result;
+}
+
 export function dendraClock(canvas: HTMLCanvasElement) {
-  var startTime = performance.now();
+  //var startTime = performance.now();
   const settings = new DendraClockPersistentOptions();
 
   // Prepare hands storage
@@ -140,42 +114,39 @@ export function dendraClock(canvas: HTMLCanvasElement) {
 
   // ===== Calculate stage =====
   // Calculate all arms positions and save them to hands_map
+
+  // Calculate angles of current time
   const now = new Date();
+  const seconds = now.getSeconds() + now.getMilliseconds() / 1000.0;
+  const minutes = now.getMinutes() + seconds / 60.0;
+  const hours = now.getHours() + minutes / 60.0;
+  const hour_angle = (hours * Math.PI) / 6 ;
+  const minute_angle = (minutes * Math.PI) / 30 ;
+  const second_angle = (seconds * Math.PI) / 30 ;
   let clock_tasks: ClockTask[] = [];
+  let next_tasks: ClockTask[] = [];
 
-  clock_tasks.push(new ClockTask(canvas.width / 2, canvas.height / 2, 0, 0));
+  clock_tasks.push(new ClockTask(canvas.width / 2, canvas.height / 2, 0));
 
-  while (clock_tasks.length > 0) {
-    const clock_task = clock_tasks.pop()!;
-    if (clock_task.depth > settings.DEPTH) continue;
-    const clock = new AnalogClock(now, clock_task.x, clock_task.y, clock_task.depth, settings);
+  let depth = 0;
+  let hands: Hand[] = [];
 
-    // Store hands in hands array for current depth
-    let hands_array = hands_map.get(clock_task.depth);
-    if (hands_array == undefined) {
-      console.assert(hands_array != undefined);
-      hands_array = [];   // To please TS checker only
+  do {
+    for (let current_task of clock_tasks) {
+      let result = processClockTask(current_task, { hour_angle, minute_angle, second_angle  }, depth, settings);
+        next_tasks.push(...result.tasks);
+        hands.push(...result.hands);
     }
-
-    if (clock_task.depth != 0) {
-      clock.rotateToHour(clock_task.rotation);
-    }
-    else {
-      clock.calculateEndPoints();
-      hands_array.push(clock.hourHand);
-    }
-    hands_array.push(clock.minuteHand);
-    hands_array.push(clock.secondHand);
-
-    let mt = new ClockTask(clock.minuteHand.endX, clock.minuteHand.endY, clock_task.depth + 1, clock.minuteHand.angle);
-    let st = new ClockTask(clock.secondHand.endX, clock.secondHand.endY, clock_task.depth + 1, clock.secondHand.angle);
-    clock_tasks.push(mt);
-    clock_tasks.push(st);
-  }
-
+    clock_tasks = next_tasks;
+    next_tasks = [];
+    hands_map.set(depth, hands);
+    hands = [];
+    depth++;
+  } while (clock_tasks.length > 0);
 
   console.assert(hands_map.get(0)?.length == 3);
-  const calc_timestamp = performance.now();
+  //const calc_timestamp = performance.now();
+
 
   // ===== Draw stage =====
   ctx.globalCompositeOperation = "destination-over";
@@ -208,21 +179,9 @@ export function dendraClock(canvas: HTMLCanvasElement) {
   }
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const draw_timestamp = performance.now();
+  //const draw_timestamp = performance.now();
 
-  performanses(startTime, calc_timestamp, draw_timestamp);
-}
-
-function sum_rotations(rotation1: number, rotation2: number) {
-  // Add the two rotation values
-  let sum = rotation1 + rotation2;
-  // Normalize the result to be within the range [0, 2π)
-  sum = sum % (2 * Math.PI);
-  // If the result is negative, add 2π to make it positive
-  while (sum < 0) {
-    sum += 2 * Math.PI;
-  }
-  return sum;
+  //performanses(startTime, calc_timestamp, draw_timestamp);
 }
 
 let stage_calc: number[] = [];
@@ -260,12 +219,12 @@ function performanses(start: DOMHighResTimeStamp, calc: DOMHighResTimeStamp, dra
   function process_stage(stage: number[]) {
     let sum = stage.reduce((partialSum, a) => partialSum + a, 0);
     let avg = sum / stage.length;
-    return 1000 / avg;
+    return avg;
   }
   const calc_perf = process_stage(stage_calc);
   const draw_perf = process_stage(stage_draw);
 
-  performance_text = `Calculation: ${calc_perf.toFixed(2)}hz, Drawing: ${draw_perf.toFixed(2)}hz`;
+  performance_text = `Calculation: ${calc_perf.toFixed(3)} msec, Drawing: ${draw_perf.toFixed(3)} msec`;
 
   stage_calc.length = 0;
   stage_draw.length = 0;

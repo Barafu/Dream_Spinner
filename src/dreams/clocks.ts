@@ -1,6 +1,7 @@
 // Clocks dream.
 
 export function clock(canvas: HTMLCanvasElement) {
+  console.log("clock started");
   const now = new Date();
   const ctx = canvas.getContext("2d");
   if (ctx === null) {
