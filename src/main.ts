@@ -2,24 +2,24 @@
 import { clock } from "./dreams/clocks";
 import { dendraClock } from "./dreams/dendraclock";
 
-declare var pywebview: any;
+//import { event, window, path } from '@tauri-apps/api'
+import { exit } from '@tauri-apps/plugin-process';
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 let canvas: HTMLCanvasElement | null = null;
-//let dream = "clock";
-let dream = "dendraclock";
+const dreams = ["clock", "dendraclock"];
+let dream = dreams[Math.floor(Math.random() * dreams.length)];
 
-window.addEventListener('pywebviewready', function () {
-  window.addEventListener("mouseup", (event) => {
-    if (event.button == 0) {
-      pywebview.api.quit();
-    }
-  });
-})
+window.addEventListener("mouseup", (event) => {
+  if (event.button == 0) {
+    exit(0)
+  }
+});
 
 window.addEventListener("DOMContentLoaded", function () {
+  getCurrentWindow().show();
   window.addEventListener("resize", resizeCanvas);
   canvas = document.getElementById("dreamCanvas") as HTMLCanvasElement;
-  let dream: string = "dendraclock";
   resizeCanvas();
   animate();
 });

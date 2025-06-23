@@ -27,7 +27,7 @@ impl DreamRunner {
                     tauri::WebviewUrl::App(RUNNER_PAGE.into()),
                 )
                 .fullscreen(FULLSCREEN)
-                .visible(false)
+                .visible(false) // Windows will be made visible after content has loaded. It prevent white flash during startup
                 .build()?;
 
                 if need_multiscreen {

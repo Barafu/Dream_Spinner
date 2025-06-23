@@ -1,9 +1,6 @@
 let performance_text: string = "Not set";
 const SHOW_PERFORMANCE = false;
 
-const HALF_PI = Math.PI / 2.0;
-const DVA_PI = Math.PI * 2.0;
-
 class Hand {
   startX: number;
   startY: number;
@@ -67,6 +64,12 @@ class ClockTaskAngles {
   hour_angle: number;
   minute_angle: number;
   second_angle: number;
+
+  constructor(hour_angle: number, minute_angle: number, second_angle: number) {
+    this.hour_angle = hour_angle;
+    this.minute_angle = minute_angle;
+    this.second_angle = second_angle;
+  }
 }
 
 function processClockTask(clock_task: ClockTask, angles: ClockTaskAngles, depth: number, settings: DendraClockPersistentOptions) {
@@ -133,7 +136,8 @@ export function dendraClock(canvas: HTMLCanvasElement) {
 
   do {
     for (let current_task of clock_tasks) {
-      let result = processClockTask(current_task, { hour_angle, minute_angle, second_angle  }, depth, settings);
+      let current_angles = new ClockTaskAngles(hour_angle, minute_angle, second_angle);
+      let result = processClockTask(current_task, current_angles, depth, settings);
         next_tasks.push(...result.tasks);
         hands.push(...result.hands);
     }
@@ -199,7 +203,8 @@ let stage_draw: number[] = [];
  * @param {DOMHighResTimeStamp} calc - The timestamp marking the end of the calculation stage and start of the drawing stage.
  * @param {DOMHighResTimeStamp} draw - The timestamp marking the end of the drawing stage.
  */
-function performanses(start: DOMHighResTimeStamp, calc: DOMHighResTimeStamp, draw: DOMHighResTimeStamp) {
+// @ts-expect-error - This function will be used later
+function performances(start: DOMHighResTimeStamp, calc: DOMHighResTimeStamp, draw: DOMHighResTimeStamp) {
   const calc_time: number = calc - start;
   const draw_time: number = draw - calc;
 
@@ -214,7 +219,6 @@ function performanses(start: DOMHighResTimeStamp, calc: DOMHighResTimeStamp, dra
    * Process a stage of timings, log the average to the console and
    * clear the array.
    * @param {number[]} stage - array of timings
-   * @param {string} text - string to prefix the log message with
    */
   function process_stage(stage: number[]) {
     let sum = stage.reduce((partialSum, a) => partialSum + a, 0);
